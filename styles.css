@@ -37,93 +37,192 @@ body {
 
 /* --- ESTILOS DE TOMA DE PEDIDOS (POS) --- */
 
-/* Cabecera de Categorías */
+/* Cabecera de Categorías elegante */
 .pos-cat-header {
-  background-color: #fca510;
-  color: #1a1a1a;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.95rem;
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
 }
 
-/* Tarjeta principal estilo limpio */
+/* Tarjeta de Producto refinada */
 .pos-card-producto {
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
   background-color: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  padding: 16px !important;
-  transition: all 0.2s ease;
+  border: 1px solid #eef2f5 !important;
+  border-radius: 12px;
+  padding: 14px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
 }
 
+.pos-card-producto:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.07);
+  border-color: #cbd5e1 !important;
+}
+
+/* Título y Precio */
 .pos-prod-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #0f172a;
-  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 2px;
 }
 
 .pos-prod-price {
-  font-size: 0.95rem;
-  color: #64748b;
-  font-weight: 500;
-  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2563eb;
 }
 
-/* Selector de cantidad principal (Bloque Gris) */
+/* Pastilla Central de Contador (- 0 +) */
 .pos-qty-pill {
-  background-color: #f1f5f9;
-  border-radius: 12px;
-  padding: 4px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 2px 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .btn-pos-sq {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px !important;
-  border: none !important;
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  font-weight: 700;
-  font-size: 1.2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  transition: background-color 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-pos-sq:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
 }
 
 .btn-pos-sq:active {
-  background-color: #e2e8f0 !important;
-  transform: scale(0.96);
+  transform: scale(0.92);
 }
 
 .pos-cant-num {
-  font-size: 1.15rem;
   font-weight: 700;
+  font-size: 0.9rem;
   color: #0f172a;
-  min-width: 30px;
-  text-align: center;
+  min-width: 20px;
 }
 
-/* Botones de docenas (-12 u. / +12 u.) */
+/* Botones de Docena (-12 u. / +12 u.) */
 .btn-docena-pill {
-  background-color: #e2e8f0;
-  border: none;
-  border-radius: 8px;
-  color: #1e293b;
-  font-weight: 700;
-  font-size: 0.85rem;
-  padding: 8px 0;
-  width: 48%;
-  transition: background-color 0.15s ease;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #475569;
+  padding: 3px 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-docena-pill:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
 .btn-docena-pill:active {
-  background-color: #cbd5e1;
+  background-color: #e2e8f0;
+}
+
+/* --- ESTILIZACIÓN DE BOTONES DE ACCIÓN (POS) --- */
+
+/* Botón 'Solo Preparar' */
+.btn-outline-info {
+  color: #2563eb !important;
+  border-color: #cbd5e1 !important;
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.btn-outline-info:hover {
+  background-color: #eff6ff !important;
+  border-color: #93c5fd !important;
+  color: #1d4ed8 !important;
+}
+
+/* Botón 'Entregar Impago' (Outline Warning) */
+.btn-outline-warning {
+  color: #d97706 !important;
+  border-color: #cbd5e1 !important;
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.btn-outline-warning:hover {
+  background-color: #fffbeb !important;
+  border-color: #fcd34d !important;
+  color: #b45309 !important;
+}
+
+/* Botón 'Limpiar' */
+.btn-danger {
+  background-color: #ffffff !important;
+  border: 1px solid #fca5a5 !important;
+  color: #ef4444 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-danger:hover {
+  background-color: #fef2f2 !important;
+  border-color: #f87171 !important;
+  color: #dc2626 !important;
+}
+
+/* Botón 'Cobrar y Entregar' (Principal) */
+.btn-success {
+  background-color: #10b981 !important;
+  border: none !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 10px 16px !important;
+  font-size: 0.95rem !important;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-success:hover {
+  background-color: #059669 !important;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+.btn-success:active {
+  transform: translateY(0);
 }

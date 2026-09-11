@@ -731,15 +731,26 @@ async function guardarPedido(estadoInicial) {
   // 2. Insertar Detalle de Ítems
   const detalles = keys.map(idProd => {
     const p = cacheProductos.find(x => x.id == idProd);
+    const precios = obtenerPrecioProducto(p.id, p.id_categoria || p.idCategoria);
+
     return {
       id_pedido: pedido.id,
       id_producto: p.id,
       cantidad: carrito[idProd],
-      precio_unitario: obtenerPrecioProducto(p.id, p.id_categoria)
+      precio: precios.unidad // Mapeado a la columna 'precio' de TB_DPEDIDOS
     };
   });
 
   await supabaseClient.from('TB_DPEDIDOS').insert(detalles);
+
+  const { error: errorDetalle } = await supabaseClient
+    .from('TB_DPEDIDOS')
+    .insert(detalles);
+
+  if (errorDetalle) {
+    alert('Error al guardar el detalle del pedido: ' + errorDetalle.message);
+    return;
+  }
 
   alert(`¡Pedido #${pedido.id} registrado correctamente!`);
   resetearPedido();
