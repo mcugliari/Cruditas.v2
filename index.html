@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cruditas</title>
+
+  <!-- Bootstrap 4 y AdminLTE 3 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- ESTILOS PERSONALIZADOS -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- LIBRERÍA DE SUPABASE (JS SDK) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+<div class="wrapper">
+
+  <!-- NAVBAR SUPERIOR -->
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <ul class="navbar-nav align-items-center">
+      <li class="nav-item">
+        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+      </li>
+      <li class="nav-item d-none d-sm-inline-block ml-2">
+        <span class="nav-link font-weight-bold text-dark">
+          🍕🥟 <strong>CRUDITAS</strong> <small class="text-muted ml-1">| Fábrica de Pizzas y Empanadas</small> 
+        </span>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- SIDEBAR (MENÚ LATERAL) -->
+  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <a href="#" class="brand-link d-flex align-items-center">
+      <img src="img/logo.png" 
+           alt="Cruditas Logo" 
+           class="brand-image img-circle elevation-2" 
+           style="opacity: .9; max-height: 38px; border: 1px solid #ffc107;">
+      <span class="brand-text font-weight-bold ml-2 text-warning">CRUDITAS</span>
+    </a>
+
+    <div class="sidebar">
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="navegarA('pedidos', this)">
+              <i class="nav-icon fas fa-cash-register"></i>
+              <p>Toma de Pedidos</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link active" onclick="navegarA('clientes', this)">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Clientes</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="navegarA('productos', this)">
+              <i class="nav-icon fas fa-box"></i>
+              <p>Productos</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="navegarA('listas', this)">
+              <i class="nav-icon fas fa-tags"></i>
+              <p>Listas de Precios</p>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="content-wrapper p-3">
+
+    <!-- 1. SECCIÓN: TOMA DE PEDIDOS -->
+    <section id="sec-pedidos" class="modulo-app" style="display: none;">
+      <div class="content-header">
+        <h1 class="m-0">🛒 Nueva Venta</h1>
+      </div>
+    </section>
+
+    <!-- 2. SECCIÓN: CLIENTES (ABM) -->
+    <section id="sec-clientes" class="modulo-app">
+      <div class="content-header">
+        <h1 class="m-0 mb-3">👥 Gestión de Clientes</h1>
+      </div>
+
+      <div class="row">
+        <!-- Formulario para agregar cliente -->
+        <div class="col-md-5">
+          <div class="card card-primary">
+            <div class="card-header">
+              <h3 class="card-title">Nuevo Cliente</h3>
+            </div>
+            <form id="form-cliente" onsubmit="guardarCliente(event)">
+              <div class="card-body">
+                <div class="form-group">
+                  <label for="cli-nombre">Nombre y Apellido *</label>
+                  <input type="text" class="form-control" id="cli-nombre" placeholder="ej. Juan Pérez" required>
+                </div>
+                <div class="form-group">
+                  <label for="cli-telefono">Teléfono / WhatsApp</label>
+                  <input type="text" class="form-control" id="cli-telefono" placeholder="ej. 1122334455">
+                </div>
+                <div class="form-group">
+                  <label for="cli-direccion">Dirección</label>
+                  <input type="text" class="form-control" id="cli-direccion" placeholder="ej. Av. San Martín 123">
+                </div>
+              </div>
+              <div class="card-footer">
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i class="fas fa-save mr-1"></i> Guardar Cliente
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Tabla con el listado de clientes -->
+        <div class="col-md-7">
+          <div class="card card-outline card-secondary">
+            <div class="card-header">
+              <h3 class="card-title">Listado de Clientes Registrados</h3>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                  <thead>
+                    <tr>
+                      <th># ID</th>
+                      <th>Nombre</th>
+                      <th>Teléfono</th>
+                      <th>Dirección</th>
+                      <th class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tabla-clientes-body">
+                    <tr>
+                      <td colspan="5" class="text-center text-muted py-3">Cargando clientes...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SECCIÓN: PRODUCTOS (ABM) -->
+    <section id="sec-productos" class="modulo-app" style="display: none;">
+      <div class="content-header">
+        <div class="container-fluid">
+          <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+              <h1 class="m-0 font-weight-bold text-dark"><i class="fas fa-boxes mr-2 text-warning"></i>Gestión de Productos</h1>
+            </div>
+            <div class="col-sm-6 text-right">
+              <button class="btn btn-warning font-weight-bold" onclick="abrirModalNuevoProducto()">
+                <i class="fas fa-plus mr-1"></i> Nuevo Producto
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-outline card-warning mt-2">
+        <div class="card-header">
+          <h3 class="card-title font-weight-bold">Catálogo de Productos</h3>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th style="width: 80px"># ID</th>
+                  <th>Categoría</th>
+                  <th>Producto</th>
+                  <th class="text-center">Permite Docena</th>
+                  <th class="text-center" style="width: 150px">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-productos-body">
+                <tr>
+                  <td colspan="5" class="text-center py-4">Cargando productos...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. SECCIÓN: LISTAS DE PRECIOS -->
+    <section id="sec-listas" class="modulo-app" style="display: none;">
+    <div class="content-header">
+        <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-6">
+            <h1 class="m-0 font-weight-bold text-dark"><i class="fas fa-tags mr-2 text-warning"></i>Listas de Precios</h1>
+            </div>
+            <div class="col-sm-6 text-right">
+            <div class="form-inline justify-content-end">
+                <label class="mr-2 font-weight-bold" for="select-lista-activa">Lista a editar:</label>
+                <select class="form-control font-weight-bold border-warning" id="select-lista-activa" onchange="cargarMatrizPrecios()">
+                <option value="">Cargando listas...</option>
+                </select>
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- TABLA 1: Precios por Categoría (Base General) -->
+        <div class="col-md-6">
+        <div class="card card-warning card-outline">
+            <div class="card-header">
+            <h3 class="card-title font-weight-bold"><i class="fas fa-folder mr-1"></i> Precios Base por Categoría</h3>
+            </div>
+            <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                <tr>
+                    <th>Categoría</th>
+                    <th class="text-right" style="width: 130px">Precio Un.</th>
+                    <th class="text-right" style="width: 130px">Precio Doc.</th>
+                    <th class="text-center" style="width: 80px">Acción</th>
+                </tr>
+                </thead>
+                <tbody id="tabla-precios-categorias-body">
+                <tr><td colspan="4" class="text-center py-3">Seleccioná una lista...</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+        </div>
+
+        <!-- TABLA 2: Precios Especiales por Producto (Overrides) -->
+        <div class="col-md-6">
+        <div class="card card-secondary card-outline">
+            <div class="card-header d-flex align-items-center justify-content-between">
+            <h3 class="card-title font-weight-bold m-0"><i class="fas fa-star mr-1 text-warning"></i> Excepciones por Producto</h3>
+            <button class="btn btn-sm btn-outline-dark font-weight-bold ml-auto" onclick="abrirModalPrecioEspecial()">
+                <i class="fas fa-plus mr-1"></i> Agregar Excepción
+            </button>
+            </div>
+            <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                <tr>
+                    <th>Producto / Gusto</th>
+                    <th class="text-right" style="width: 120px">Unidad</th>
+                    <th class="text-right" style="width: 120px">Docena</th>
+                    <th class="text-center" style="width: 70px"></th>
+                </tr>
+                </thead>
+                <tbody id="tabla-precios-productos-body">
+                <tr><td colspan="4" class="text-center py-3">Sin excepciones para esta lista.</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+        </div>
+    </div>
+    </section>
+
+  </div><!-- /.content-wrapper -->
+
+  <!-- MODALES DE LA APLICACIÓN -->
+
+  <!-- Modal Editar Cliente -->
+  <div class="modal fade" id="modal-editar-cliente" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title font-weight-bold"><i class="fas fa-user-edit mr-2"></i>Editar Cliente</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form id="form-editar-cliente" onsubmit="guardarEdicionCliente(event)">
+          <div class="modal-body">
+            <input type="hidden" id="edit-cli-id">
+            <div class="form-group">
+              <label for="edit-cli-nombre">Nombre y Apellido *</label>
+              <input type="text" class="form-control" id="edit-cli-nombre" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-cli-telefono">Teléfono / WhatsApp</label>
+              <input type="text" class="form-control" id="edit-cli-telefono">
+            </div>
+            <div class="form-group">
+              <label for="edit-cli-direccion">Dirección de Entrega</label>
+              <input type="text" class="form-control" id="edit-cli-direccion">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-warning font-weight-bold">
+              <i class="fas fa-sync-alt mr-1"></i> Actualizar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear/Editar Producto -->
+  <div class="modal fade" id="modal-producto" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title font-weight-bold" id="modal-producto-title">Nuevo Producto</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form id="form-producto" onsubmit="guardarProducto(event)">
+          <div class="modal-body">
+            <input type="hidden" id="prod-id">
+            
+            <div class="form-group">
+              <label for="prod-categoria">Categoría *</label>
+              <select class="form-control" id="prod-categoria" required>
+                <option value="">Cargando categorías...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="prod-nombre">Nombre del Producto / Gusto *</label>
+              <input type="text" class="form-control" id="prod-nombre" placeholder="Ej: Carne Cortada a Cuchillo" required>
+            </div>
+
+            <div class="form-group mb-0">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="prod-permite-docena" checked>
+                <label class="custom-control-label font-weight-bold" for="prod-permite-docena">
+                  Permite venta por docena
+                </label>
+              </div>
+              <small class="form-text text-muted">Marcar para Empanadas y Canastitas. Desmarcar para Pizzas.</small>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-warning font-weight-bold">
+              <i class="fas fa-save mr-1"></i> Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<!-- MODAL AGREGAR EXCEPCIÓN / PRECIO ESPECIAL -->
+<div class="modal fade" id="modal-precio-especial" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title font-weight-bold"><i class="fas fa-star mr-2"></i>Asignar Precio Especial</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form id="form-precio-especial" onsubmit="guardarPrecioEspecial(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="modal-especial-producto">Seleccionar Producto *</label>
+            <select class="form-control" id="modal-especial-producto" required>
+              <option value="">Cargando productos...</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <div class="form-group">
+                <label for="modal-especial-unidad">Precio Unidad ($) *</label>
+                <input type="number" step="0.01" class="form-control" id="modal-especial-unidad" placeholder="0.00" required>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label for="modal-especial-docena">Precio Docena ($)</label>
+                <input type="number" step="0.01" class="form-control" id="modal-especial-docena" placeholder="Opcional">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-warning font-weight-bold">Guardar Precio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>  
+
+</div><!-- /.wrapper -->
+
+<!-- Scripts de AdminLTE -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+
+<!-- ARCHIVO DE LÓGICA -->
+<script src="app.js"></script>
+
+</body>
+</html>

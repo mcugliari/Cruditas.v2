@@ -1,0 +1,36 @@
+/* 1. Mejoras generales para pantalla táctil en celulares */
+body {
+  touch-action: manipulation; /* Mejora la respuesta al hacer tap */
+}
+
+/* 2. Resaltar filas de la tabla al pasar el mouse o tocar */
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05) !important;
+}
+
+/* 3. Hacer los botones un poco más amplios para el uso en celular */
+.btn {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+/* 4. Cabecera fija o sombra suave para tarjetas */
+.card {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+/* 5. Personalización del badge del ID */
+.badge-secondary {
+  font-size: 0.85rem;
+  padding: 0.4em 0.6em;
+}
+
+/* Ajustes para el logo */
+.brand-link {
+  background-color: #1e2229 !important; /* Le da un fondo ligeramente más oscuro a la cabecera del menú */
+}
+/* Ajustes para el logo */
+.brand-image {
+  object-fit: contain;
+}
