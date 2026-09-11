@@ -30,6 +30,10 @@ function navegarA(seccionId, elementoMenu) {
     cargarProductos();
   } else if (seccionId === 'listas') {
     inicializarModuloListas();
+  } else if (seccionId === 'pedidos') {
+    inicializarPOS(); // Carga la pantalla de Toma de Pedidos
+  } else if (seccionId === 'pedidos-dia') {
+    cargarTablaPedidos(); // Carga el listado/gestión de pedidos del día
   }
 
 }
@@ -143,7 +147,9 @@ async function eliminarCliente(id, nombre) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  cargarClientes();
+  // Activa por defecto la vista de Toma de Pedidos
+  const linkPedidos = document.querySelector('a[onclick*="pedidos"]');
+  navegarA('pedidos', linkPedidos);
 });
 
 //if (seccionId === 'productos') {
@@ -183,10 +189,10 @@ async function cargarProductos() {
       id,
       nombre,
       m_permite_docena,
-      idCategoria,
+      id_categoria,
       TB_BCATEGORIAS ( nombre )
     `)
-    .order('idCategoria', { ascending: true })
+    .order('id_categoria', { ascending: true })
     .order('nombre', { ascending: true });
 
   if (error) {
@@ -213,7 +219,7 @@ async function cargarProductos() {
           : '<span class="badge badge-light border"><i class="fas fa-times mr-1 text-muted"></i>No</span>'}
       </td>
       <td class="text-center">
-        <button class="btn btn-sm btn-warning mr-1" onclick="abrirModalEditarProducto(${prod.id}, '${prod.nombre}', ${prod.idCategoria}, ${prod.m_permite_docena})">
+        <button class="btn btn-sm btn-warning mr-1" onclick="abrirModalEditarProducto(${prod.id}, '${prod.nombre}', ${prod.id_categoria}, ${prod.m_permite_docena})">
           <i class="fas fa-edit"></i>
         </button>
         <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${prod.id}, '${prod.nombre}')">
@@ -233,10 +239,10 @@ function abrirModalNuevoProducto() {
 }
 
 // 4. EDITAR PRODUCTO (Abre Modal cargado)
-function abrirModalEditarProducto(id, nombre, idCategoria, permiteDocena) {
+function abrirModalEditarProducto(id, nombre, id_categoria, permiteDocena) {
   document.getElementById('prod-id').value = id;
   document.getElementById('prod-nombre').value = nombre;
-  document.getElementById('prod-categoria').value = idCategoria;
+  document.getElementById('prod-categoria').value = id_categoria;
   document.getElementById('prod-permite-docena').checked = permiteDocena;
   document.getElementById('modal-producto-title').innerText = 'Editar Producto';
   $('#modal-producto').modal('show');
@@ -248,12 +254,12 @@ async function guardarProducto(event) {
 
   const id = document.getElementById('prod-id').value;
   const nombre = document.getElementById('prod-nombre').value;
-  const idCategoria = document.getElementById('prod-categoria').value;
+  const id_categoria = document.getElementById('prod-categoria').value;
   const m_permite_docena = document.getElementById('prod-permite-docena').checked;
 
   const payload = {
     nombre,
-    idCategoria,
+    id_categoria,
     m_permite_docena
   };
 
@@ -327,12 +333,12 @@ async function cargarMatrizPrecios() {
   const { data: preciosExistentes } = await supabaseClient
     .from('TB_DLISTA_PRECIOS')
     .select('*')
-    .eq('id_Lista_Precio', idLista);
+    .eq('id_lista_precio', idLista);
 
   // Renderizar Categorías
   const tbodyCat = document.getElementById('tabla-precios-categorias-body');
   tbodyCat.innerHTML = categorias.map(cat => {
-    const p = preciosExistentes.find(x => x.id_categoria == cat.id && x.id_Producto === null) || {};
+    const p = preciosExistentes.find(x => x.id_categoria == cat.id && x.id_producto === null) || {};
     const un = p.precio_unidad ?? '';
     const doc = p.precio_docena ?? '';
 
@@ -352,7 +358,7 @@ async function cargarMatrizPrecios() {
 
   // Renderizar Excepciones de Productos (Overrides)
   const tbodyProd = document.getElementById('tabla-precios-productos-body');
-  const preciosProd = preciosExistentes.filter(x => x.id_Producto !== null);
+  const preciosProd = preciosExistentes.filter(x => x.id_producto !== null);
 
   if (preciosProd.length === 0) {
     tbodyProd.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No hay precios especiales asignados.</td></tr>`;
@@ -360,14 +366,14 @@ async function cargarMatrizPrecios() {
   }
 
   // Traer nombres de productos para los que tienen precio especial
-  const idsProds = preciosProd.map(x => x.id_Producto);
+  const idsProds = preciosProd.map(x => x.id_producto);
   const { data: productos } = await supabaseClient
     .from('TB_BPRODUCTOS')
     .select('id, nombre')
     .in('id', idsProds);
 
   tbodyProd.innerHTML = preciosProd.map(p => {
-    const prod = productos.find(x => x.id == p.id_Producto) || { nombre: 'Producto #' + p.id_Producto };
+    const prod = productos.find(x => x.id == p.id_producto) || { nombre: 'Producto #' + p.id_producto };
     return `
       <tr>
         <td class="font-weight-bold">${prod.nombre}</td>
@@ -384,15 +390,15 @@ async function cargarMatrizPrecios() {
 }
 
 // 3. GUARDAR / ACTUALIZAR PRECIO BASE DE CATEGORÍA
-async function guardarPrecioCategoria(idCategoria, idDetalle) {
+async function guardarPrecioCategoria(id_categoria, idDetalle) {
   const idLista = document.getElementById('select-lista-activa').value;
-  const precio_unidad = document.getElementById(`cat-un-${idCategoria}`).value || null;
-  const precio_docena = document.getElementById(`cat-doc-${idCategoria}`).value || null;
+  const precio_unidad = document.getElementById(`cat-un-${id_categoria}`).value || null;
+  const precio_docena = document.getElementById(`cat-doc-${id_categoria}`).value || null;
 
   const payload = {
-    id_Lista_Precio: idLista,
-    id_categoria: idCategoria,
-    id_Producto: null,
+    id_lista_precio: idLista,
+    id_categoria: id_categoria,
+    id_producto: null,
     precio_unidad: precio_unidad ? parseFloat(precio_unidad) : null,
     precio_docena: precio_docena ? parseFloat(precio_docena) : null
   };
@@ -422,12 +428,12 @@ async function abrirModalPrecioEspecial() {
 async function guardarPrecioEspecial(e) {
   e.preventDefault();
   const idLista = document.getElementById('select-lista-activa').value;
-  const id_Producto = document.getElementById('modal-especial-producto').value;
+  const id_producto = document.getElementById('modal-especial-producto').value;
   const precio_unidad = parseFloat(document.getElementById('modal-especial-unidad').value);
   const docVal = document.getElementById('modal-especial-docena').value;
   const precio_docena = docVal ? parseFloat(docVal) : null;
 
-  const payload = { id_Lista_Precio: idLista, id_categoria: null, id_Producto, precio_unidad, precio_docena };
+  const payload = { id_lista_precio: idLista, id_categoria: null, id_producto, precio_unidad, precio_docena };
 
   const { error } = await supabaseClient.from('TB_DLISTA_PRECIOS').insert([payload]);
   if (error) alert('Error: ' + error.message);
@@ -441,5 +447,417 @@ async function eliminarPrecioEspecial(idDetalle) {
   if (confirm('¿Eliminar precio especial? El producto volverá a tomar el precio base de su categoría.')) {
     await supabaseClient.from('TB_DLISTA_PRECIOS').delete().eq('id', idDetalle);
     cargarMatrizPrecios();
+  }
+}
+
+// --- ESTADO GLOBAL DEL POS ---
+let carrito = {}; // { idProducto: cantidad }
+let cacheProductos = [];
+let cachePrecios = [];
+let cacheCategorias = [];
+
+// 1. INICIALIZAR EL MÓDULO DE TOMA DE PEDIDOS
+async function inicializarPOS() {
+  await cargarSelectsPOS();
+  await cargarPOS();
+}
+
+// Cargar Clientes, Listas y Medios de Pago
+async function cargarSelectsPOS() {
+  const { data: clientes } = await supabaseClient.from('TB_BCLIENTES').select('*').order('nombre');
+  const { data: listas } = await supabaseClient.from('TB_TLISTA_PRECIOS').select('*');
+  const { data: medios } = await supabaseClient.from('TB_BMEDIO_PAGO').select('*');
+
+  // Select Clientes
+  const selectCli = document.getElementById('select-cliente-pedido');
+  if (selectCli && clientes) {
+    selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  }
+
+  // Select Listas
+  const selectLis = document.getElementById('select-lista-pedido');
+  if (selectLis && listas) {
+    selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
+  }
+
+  // Select Medios Pago
+  const selectMed = document.getElementById('select-medio-pago');
+  if (selectMed && medios) {
+    selectMed.innerHTML = medios.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
+  }
+
+  await alCambiarCliente();
+}
+
+// Sugerir la lista según el cliente seleccionado
+async function alCambiarCliente() {
+  const selectCli = document.getElementById('select-cliente-pedido');
+  if (!selectCli || !selectCli.value) return;
+
+  const { data } = await supabaseClient
+    .from('TB_ACLIENTE_LISTA_PRECIOS')
+    .select('id_lista_precio')
+    .eq('id_cliente', selectCli.value)
+    .eq('m_predeterminada', true)
+    .maybeSingle();
+
+  if (data && data.id_lista_precio) {
+    document.getElementById('select-lista-pedido').value = data.id_lista_precio;
+  }
+  
+  await cargarPOS();
+}
+
+// Carga de datos desde Supabase (Petición a Servidor)
+async function cargarPOS() {
+  const selectLis = document.getElementById('select-lista-pedido');
+  const idLista = selectLis && selectLis.value ? parseInt(selectLis.value) : 1;
+
+  const { data: categorias } = await supabaseClient.from('TB_BCATEGORIAS').select('*').order('id');
+  const { data: productos } = await supabaseClient.from('TB_BPRODUCTOS').select('*').order('nombre');
+  const { data: precios } = await supabaseClient.from('TB_DLISTA_PRECIOS').select('*').eq('id_lista_precio', idLista);
+
+  cacheCategorias = categorias || [];
+  cacheProductos = productos || [];
+  cachePrecios = precios || [];
+
+  renderizarGrillaPOS();
+}
+
+// Dibuja las tarjetas HTML usando los datos en caché
+function renderizarGrillaPOS() {
+  const contenedor = document.getElementById('contenedor-menu-productos');
+  if (!contenedor) return;
+  contenedor.innerHTML = '';
+
+  cacheCategorias.forEach(cat => {
+    const prodsCat = cacheProductos.filter(p => (p.id_categoria || p.idCategoria) === cat.id);
+    if (prodsCat.length === 0) return;
+
+    let htmlCat = `
+      <div class="pos-cat-header mb-2 mt-2">${cat.nombre}</div>
+      <div class="row">
+    `;
+
+    prodsCat.forEach(p => {
+      const cant = carrito[p.id] || 0;
+      const idCatProd = p.id_categoria || p.idCategoria;
+      const precios = obtenerPrecioProducto(p.id, idCatProd);
+
+      htmlCat += `
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card h-100 pos-card-producto border-0">
+            <strong class="pos-prod-title text-truncate" title="${p.nombre}">${p.nombre}</strong>
+            <span class="pos-prod-price mb-3">$${precios.unidad.toLocaleString('es-AR')}</span>
+            
+            <div class="pos-qty-pill mb-2">
+              <button class="btn btn-pos-sq" onclick="alterarCantidad(${p.id}, -1)">-</button>
+              <span class="pos-cant-num" id="cant-prod-${p.id}">${cant}</span>
+              <button class="btn btn-pos-sq" onclick="alterarCantidad(${p.id}, 1)">+</button>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <button class="btn btn-docena-pill" onclick="alterarCantidad(${p.id}, -12)">-12 u.</button>
+              <button class="btn btn-docena-pill" onclick="alterarCantidad(${p.id}, 12)">+12 u.</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    htmlCat += `</div>`;
+    contenedor.innerHTML += htmlCat;
+  });
+
+  actualizarResumenCarrito();
+}
+
+// Obtener precio aplicando la jerarquía (Retorna { unidad, docena })
+function obtenerPrecioProducto(idProd, idCat) {
+  if (!cachePrecios || cachePrecios.length === 0) return { unidad: 0, docena: null };
+
+  const idP = Number(idProd);
+  const idC = Number(idCat);
+
+  // 1. Excepción por Producto
+  const pProd = cachePrecios.find(p => p.id_producto !== null && Number(p.id_producto) === idP);
+  if (pProd) {
+    const un = pProd.precio_unidad ?? pProd.precio ?? 0;
+    const doc = pProd.precio_docena ?? null;
+    return { unidad: Number(un), docena: doc ? Number(doc) : null };
+  }
+
+  // 2. Base por Categoría
+  const pCat = cachePrecios.find(p => Number(p.id_categoria) === idC && (p.id_producto === null || p.id_producto === undefined));
+  if (pCat) {
+    const un = pCat.precio_unidad ?? pCat.precio ?? 0;
+    const doc = pCat.precio_docena ?? null;
+    return { unidad: Number(un), docena: doc ? Number(doc) : null };
+  }
+
+  return { unidad: 0, docena: null };
+}
+
+// Función auxiliar para calcular docenas + sueltas
+function calcularSubtotalItem(cantidad, precios, permiteDocena = true) {
+  if (!permiteDocena || !precios.docena) {
+    return cantidad * precios.unidad;
+  }
+
+  const docenas = Math.floor(cantidad / 12);
+  const sueltas = cantidad % 12;
+
+  return (docenas * precios.docena) + (sueltas * precios.unidad);
+}
+
+// Alterar cantidad del carrito (+1, -1, +12, -12) sin reconsultar Supabase
+function alterarCantidad(idProducto, delta) {
+  const actual = carrito[idProducto] || 0;
+  const nueva = Math.max(0, actual + delta);
+  
+  if (nueva === 0) {
+    delete carrito[idProducto];
+  } else {
+    carrito[idProducto] = nueva;
+  }
+
+  const elCant = document.getElementById(`cant-prod-${idProducto}`);
+  if (elCant) {
+    elCant.innerText = nueva;
+  } else {
+    renderizarGrillaPOS();
+  }
+
+  actualizarResumenCarrito();
+}
+
+// Actualizar resumen visual del carrito y cálculos
+function actualizarResumenCarrito() {
+  const contenedorItems = document.getElementById('resumen-carrito-items');
+  const keys = Object.keys(carrito);
+
+  if (keys.length === 0) {
+    if (contenedorItems) contenedorItems.innerHTML = `<p class="text-center text-muted small my-3">El carrito está vacío</p>`;
+    document.getElementById('cant-docenas').innerText = '0 u.';
+    document.getElementById('cant-total-items').innerText = '0';
+    document.getElementById('monto-total-pedido').innerText = '$0';
+    return;
+  }
+
+  let totalItems = 0;
+  let montoTotal = 0;
+  let html = '<ul class="list-group list-group-flush small">';
+
+  keys.forEach(idProd => {
+    const p = cacheProductos.find(x => x.id == idProd);
+    const cant = carrito[idProd];
+    const idCatProd = p.id_categoria || p.idCategoria;
+    
+    const precios = obtenerPrecioProducto(p.id, idCatProd);
+    const subtotal = calcularSubtotalItem(cant, precios, p.m_permite_docena);
+
+    totalItems += cant;
+    montoTotal += subtotal;
+
+    let detalleTexto = `${cant} u. x $${precios.unidad}`;
+    if (p.m_permite_docena && precios.docena && cant >= 12) {
+      const doc = Math.floor(cant / 12);
+      const ult = cant % 12;
+      detalleTexto = `${doc} doc. ($${precios.docena})` + (ult > 0 ? ` + ${ult} u. ($${precios.unidad})` : '');
+    }
+
+    html += `
+      <li class="list-group-item d-flex justify-content-between align-items-center p-2 bg-transparent border-bottom">
+        <div>
+          <strong class="d-block">${p.nombre}</strong>
+          <small class="text-muted">${detalleTexto}</small>
+        </div>
+        <span class="font-weight-bold">$${subtotal.toLocaleString('es-AR')}</span>
+      </li>
+    `;
+  });
+
+  html += '</ul>';
+  if (contenedorItems) contenedorItems.innerHTML = html;
+
+  const totalDocenas = (totalItems / 12).toFixed(1);
+  document.getElementById('cant-docenas').innerText = `${totalDocenas} doc.`;
+  document.getElementById('cant-total-items').innerText = totalItems;
+  document.getElementById('monto-total-pedido').innerText = `$${montoTotal.toLocaleString('es-AR')}`;
+}
+
+// Resetear carrito
+function resetearPedido() {
+  carrito = {};
+  cargarPOS();
+}
+
+// Guardar el pedido en Supabase
+async function guardarPedido(estadoInicial) {
+  const keys = Object.keys(carrito);
+  if (keys.length === 0) {
+    alert('Agregá al menos un producto al carrito.');
+    return;
+  }
+
+  const idCliente = document.getElementById('select-cliente-pedido').value;
+  const idLista = document.getElementById('select-lista-pedido').value;
+  const idMedio = document.getElementById('select-medio-pago').value;
+
+  let montoTotal = 0;
+  keys.forEach(idProd => {
+    const p = cacheProductos.find(x => x.id == idProd);
+    montoTotal += carrito[idProd] * obtenerPrecioProducto(p.id, p.id_categoria);
+  });
+
+  // 1. Insertar Cabecera de Pedido
+  const { data: pedido, error } = await supabaseClient
+    .from('TB_TPEDIDOS')
+    .insert([{
+      id_cliente: idCliente,
+      id_lista_precio: idLista,
+      id_medio_pago: idMedio,
+      estado: estadoInicial,
+      importe_total: montoTotal
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    alert('Error al guardar el pedido: ' + error.message);
+    return;
+  }
+
+  // 2. Insertar Detalle de Ítems
+  const detalles = keys.map(idProd => {
+    const p = cacheProductos.find(x => x.id == idProd);
+    return {
+      id_pedido: pedido.id,
+      id_producto: p.id,
+      cantidad: carrito[idProd],
+      precio_unitario: obtenerPrecioProducto(p.id, p.id_categoria)
+    };
+  });
+
+  await supabaseClient.from('TB_DPEDIDOS').insert(detalles);
+
+  alert(`¡Pedido #${pedido.id} registrado correctamente!`);
+  resetearPedido();
+}
+
+// --- GESTIÓN DE PEDIDOS DEL DÍA / HISTÓRICO ---
+async function cargarTablaPedidos() {
+  const inputDesde = document.getElementById('filtro-fecha-desde');
+  const inputHasta = document.getElementById('filtro-fecha-hasta');
+  
+  if (!inputDesde.value) {
+    const hoy = new Date().toISOString().split('T')[0];
+    inputDesde.value = hoy;
+    inputHasta.value = hoy;
+  }
+
+  const fechaDesde = `${inputDesde.value}T00:00:00.000Z`;
+  const fechaHasta = `${inputHasta.value}T23:59:59.999Z`;
+  const estadoFiltro = document.getElementById('filtro-estado-pedido').value;
+
+  let query = supabaseClient
+    .from('TB_TPEDIDOS')
+    .select('*, TB_BCLIENTES(nombre), TB_BMEDIO_PAGO(nombre)')
+    .gte('created_at', fechaDesde)
+    .lte('created_at', fechaHasta)
+    .order('id', { ascending: false });
+
+  if (estadoFiltro !== 'TODOS') {
+    query = query.eq('estado', estadoFiltro);
+  }
+
+  const { data: pedidos, error } = await query;
+  if (error) return;
+
+  // Calculo de KPIs
+  let totalCobrado = 0;
+  let totalPendienteCobro = 0;
+  let cantPreparacion = 0;
+  let cantAnulados = 0;
+
+  pedidos.forEach(p => {
+    if (p.estado === 'COMPLETADO') totalCobrado += (p.monto_total || 0);
+    if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.monto_total || 0);
+    if (p.estado === 'PENDIENTE') cantPreparacion++;
+    if (p.estado === 'ANULADO') cantAnulados++;
+  });
+
+  document.getElementById('kpi-total-cobrado').innerText = `$${totalCobrado.toLocaleString()}`;
+  document.getElementById('kpi-total-pendiente-cobro').innerText = `$${totalPendienteCobro.toLocaleString()}`;
+  document.getElementById('kpi-cant-preparacion').innerText = cantPreparacion;
+  document.getElementById('kpi-cant-anulados').innerText = cantAnulados;
+
+  // Renderizar Tabla
+  const tbody = document.getElementById('tabla-pedidos-body');
+  if (pedidos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No hay pedidos registrados para estos filtros.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = pedidos.map(p => {
+    const clienteNombre = p.TB_BCLIENTES ? p.TB_BCLIENTES.nombre : 'Consumidor Final';
+    const medioPago = p.TB_BMEDIO_PAGO ? p.TB_BMEDIO_PAGO.nombre : 'Sin especificar';
+    const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let badgeClass = 'badge-secondary';
+    let estadoTexto = p.estado;
+
+    if (p.estado === 'PENDIENTE') { badgeClass = 'badge-info'; estadoTexto = '⏳ Pendiente'; }
+    if (p.estado === 'ENTREGADO_IMPAGO') { badgeClass = 'badge-warning'; estadoTexto = '📦 Entregado (Impago)'; }
+    if (p.estado === 'COMPLETADO') { badgeClass = 'badge-success'; estadoTexto = '✅ Completado'; }
+    if (p.estado === 'ANULADO') { badgeClass = 'badge-danger'; estadoTexto = '🚫 Anulado'; }
+
+    return `
+      <tr>
+        <td class="font-weight-bold">#${p.id}</td>
+        <td>${hora} hs</td>
+        <td class="font-weight-bold">${clienteNombre}</td>
+        <td><small class="badge badge-light border">${medioPago}</small></td>
+        <td class="text-right font-weight-bold">$${p.monto_total || 0}</td>
+        <td class="text-center"><span class="badge ${badgeClass} p-2">${estadoTexto}</span></td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm">
+            ${p.estado !== 'COMPLETADO' && p.estado !== 'ANULADO' ? `
+              <button class="btn btn-outline-success" title="Marcar como Cobrado" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
+                <i class="fas fa-check"></i>
+              </button>
+            ` : ''}
+            ${p.estado === 'PENDIENTE' ? `
+              <button class="btn btn-outline-warning" title="Entregar sin Cobrar" onclick="cambiarEstadoPedido(${p.id}, 'ENTREGADO_IMPAGO')">
+                <i class="fas fa-truck"></i>
+              </button>
+            ` : ''}
+            ${p.estado !== 'ANULADO' ? `
+              <button class="btn btn-outline-danger" title="Anular Pedido" onclick="cambiarEstadoPedido(${p.id}, 'ANULADO')">
+                <i class="fas fa-ban"></i>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Transición de estados en Supabase
+async function cambiarEstadoPedido(idPedido, nuevoEstado) {
+  if (nuevoEstado === 'ANULADO' && !confirm('¿Seguro que deseas anular este pedido? Se excluirá del cierre de caja.')) {
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from('TB_TPEDIDOS')
+    .update({ estado: nuevoEstado })
+    .eq('id', idPedido);
+
+  if (error) {
+    alert('Error al cambiar el estado: ' + error.message);
+  } else {
+    cargarTablaPedidos();
   }
 }

@@ -34,3 +34,96 @@ body {
 .brand-image {
   object-fit: contain;
 }
+
+/* --- ESTILOS DE TOMA DE PEDIDOS (POS) --- */
+
+/* Cabecera de Categorías */
+.pos-cat-header {
+  background-color: #fca510;
+  color: #1a1a1a;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+/* Tarjeta principal estilo limpio */
+.pos-card-producto {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  padding: 16px !important;
+  transition: all 0.2s ease;
+}
+
+.pos-prod-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: block;
+}
+
+.pos-prod-price {
+  font-size: 0.95rem;
+  color: #64748b;
+  font-weight: 500;
+  display: block;
+}
+
+/* Selector de cantidad principal (Bloque Gris) */
+.pos-qty-pill {
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-pos-sq {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px !important;
+  border: none !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700;
+  font-size: 1.2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 0.15s ease;
+}
+
+.btn-pos-sq:active {
+  background-color: #e2e8f0 !important;
+  transform: scale(0.96);
+}
+
+.pos-cant-num {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Botones de docenas (-12 u. / +12 u.) */
+.btn-docena-pill {
+  background-color: #e2e8f0;
+  border: none;
+  border-radius: 8px;
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 0;
+  width: 48%;
+  transition: background-color 0.15s ease;
+}
+
+.btn-docena-pill:active {
+  background-color: #cbd5e1;
+}
