@@ -70,6 +70,27 @@ body {
   border-color: #cbd5e1 !important;
 }
 
+/* Ajuste responsive para .pos-card-producto en celulares */
+@media (max-width: 575.98px) {
+  .pos-card-producto .card-body {
+    padding: 0.4rem !important;
+  }
+  
+  .pos-card-producto .card-title {
+    font-size: 0.85rem;
+    line-height: 1.1;
+  }
+  
+  .pos-card-producto .card-text {
+    font-size: 0.9rem;
+  }
+
+  .pos-card-producto img {
+    max-height: 85px;
+    object-fit: contain;
+  }
+}
+
 /* Título y Precio */
 .pos-prod-title {
   font-size: 0.9rem;
@@ -225,4 +246,24 @@ body {
 
 .btn-success:active {
   transform: translateY(0);
+}
+
+/* Ocultar la barra al 100% fuera de la pantalla cuando está colapsada */
+body.sidebar-collapse .main-sidebar {
+  margin-left: -250px !important;
+  transform: translate3d(-250px, 0, 0) !important;
+}
+
+/* Desplegar la barra por encima del contenido al presionar la hamburguesa */
+body.sidebar-open .main-sidebar {
+  margin-left: 0 !important;
+  transform: translate3d(0, 0, 0) !important;
+  z-index: 1050;
+}
+
+/* Evitar que el contenido principal se desplace o deje espacio a la izquierda */
+.content-wrapper, 
+.main-header, 
+.main-footer {
+  margin-left: 0 !important;
 }

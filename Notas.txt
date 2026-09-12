@@ -1,0 +1,16 @@
+Ajustar la grilla responsive: Configurar las tarjetas para que se vean en 2 columnas en celulares (col-6) y 
+configurar el colapso del menú lateral.
+
+
+
+Flujo de estados del pedido: Manejar los botones de acción (Solo Preparar, Entregar Impago, Cobrar y Entregar) con sus respectivos estados 
+en Supabase.
+
+
+
+Impresión / Comprobante: Generar el ticket de comanda o resumen para cocina/impresora térmica.
+
+
+
+
+Filtros y Búsqueda: Agregar un buscador rápido de productos por nombre en la parte superior del POS.

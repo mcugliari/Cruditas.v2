@@ -26,6 +26,7 @@ function navegarA(seccionId, elementoMenu) {
   // 5. EJECUTAR CARGA SEGÚN LA SECCIÓN DETECTADA
   if (seccionId === 'clientes') {
     cargarClientes();
+    inicializarCrudClienteLista();
   } else if (seccionId === 'productos') {
     cargarProductos();
   } else if (seccionId === 'listas') {
@@ -150,14 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Activa por defecto la vista de Toma de Pedidos
   const linkPedidos = document.querySelector('a[onclick*="pedidos"]');
   navegarA('pedidos', linkPedidos);
-});
+}); // FIN DOMContentLoaded
 
-//if (seccionId === 'productos') {
-//  cargarProductos();
-//}
-
-// Actualización de navegación para cargar productos al entrar
-// (Asegurate de incluir la condición seccionId === 'productos' en tu navegarA existente)
 
 let categoriasCache = []; // Para no re-consultar categorías todo el tiempo
 
@@ -545,7 +540,7 @@ function renderizarGrillaPOS() {
       const precios = obtenerPrecioProducto(p.id, idCatProd);
 
       htmlCat += `
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+        <div class="col-6 col-sm-6 col-md-4 col-lg-3 mb-3">
           <div class="card h-100 pos-card-producto border-0">
             <strong class="pos-prod-title text-truncate" title="${p.nombre}">${p.nombre}</strong>
             <span class="pos-prod-price mb-3">$${precios.unidad.toLocaleString('es-AR')}</span>
@@ -872,3 +867,136 @@ async function cambiarEstadoPedido(idPedido, nuevoEstado) {
     cargarTablaPedidos();
   }
 }
+
+// --- CRUD TB_ACLIENTE_LISTA_PRECIOS ---
+
+async function inicializarCrudClienteLista() {
+  await cargarSelectsAsociacion();
+  await listarAsociacionesClienteLista();
+}
+
+// 1. Cargar desplegables de Clientes y Listas
+async function cargarSelectsAsociacion() {
+  const { data: clientes } = await supabaseClient.from('TB_BCLIENTES').select('id, nombre').order('nombre');
+  const { data: listas } = await supabaseClient.from('TB_TLISTA_PRECIOS').select('id, nombre');
+
+  const selectCli = document.getElementById('asoc-select-cliente');
+  const selectLis = document.getElementById('asoc-select-lista');
+
+  if (selectCli && clientes) {
+    selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  }
+  if (selectLis && listas) {
+    selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
+  }
+}
+
+// 2. READ: Listar asociaciones con Relational Queries de Supabase
+async function listarAsociacionesClienteLista() {
+  const tbody = document.getElementById('tabla-asoc-cliente-lista');
+  if (!tbody) return;
+
+  const { data, error } = await supabaseClient
+    .from('TB_ACLIENTE_LISTA_PRECIOS')
+    .select(`
+      id,
+      id_cliente,
+      id_lista_precio,
+      m_predeterminada,
+      TB_BCLIENTES ( nombre ),
+      TB_TLISTA_PRECIOS ( nombre )
+    `)
+    .order('id_cliente');
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  tbody.innerHTML = data.map(item => `
+    <tr>
+      <td class="font-weight-bold">${item.TB_BCLIENTES?.nombre || 'N/A'}</td>
+      <td>${item.TB_TLISTA_PRECIOS?.nombre || 'N/A'}</td>
+      <td class="text-center">
+        ${item.m_predeterminada 
+          ? '<span class="badge badge-success px-2 py-1">Sí</span>' 
+          : '<span class="badge badge-secondary px-2 py-1">No</span>'}
+      </td>
+      <td class="text-right">
+        <button class="btn btn-sm btn-outline-info mr-1" onclick="editarAsociacion(${item.id}, ${item.id_cliente}, ${item.id_lista_precio}, ${item.m_predeterminada})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarAsociacion(${item.id})">Eliminar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// 3. CREATE / UPDATE: Guardar relación asegurando única predeterminada por cliente
+async function guardarAsociacionClienteLista(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('asoc-id').value;
+  const idCliente = parseInt(document.getElementById('asoc-select-cliente').value);
+  const idLista = parseInt(document.getElementById('asoc-select-lista').value);
+  const esPredeterminada = document.getElementById('asoc-predeterminada').checked;
+
+  // Si se marca como predeterminada, desmarcamos las demás del mismo cliente
+  if (esPredeterminada) {
+    await supabaseClient
+      .from('TB_ACLIENTE_LISTA_PRECIOS')
+      .update({ m_predeterminada: false })
+      .eq('id_cliente', idCliente);
+  }
+
+  const payload = {
+    id_cliente: idCliente,
+    id_lista_precio: idLista,
+    m_predeterminada: esPredeterminada
+  };
+
+  let res;
+  if (id) {
+    res = await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').update(payload).eq('id', id);
+  } else {
+    res = await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').insert([payload]);
+  }
+
+  if (res.error) {
+    alert('Error al guardar: ' + res.error.message);
+  } else {
+    resetearFormAsociacion();
+    await listarAsociacionesClienteLista();
+  }
+}
+
+// 4. Cargar datos en el formulario para Editar
+function editarAsociacion(id, idCliente, idLista, esPredeterminada) {
+  document.getElementById('asoc-id').value = id;
+  document.getElementById('asoc-select-cliente').value = idCliente;
+  document.getElementById('asoc-select-lista').value = idLista;
+  document.getElementById('asoc-predeterminada').checked = esPredeterminada;
+}
+
+// 5. DELETE: Eliminar asociación
+async function eliminarAsociacion(id) {
+  if (!confirm('¿Eliminar esta asociación?')) return;
+
+  const { error } = await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').delete().eq('id', id);
+  if (error) {
+    alert('Error al eliminar: ' + error.message);
+  } else {
+    await listarAsociacionesClienteLista();
+  }
+}
+
+function resetearFormAsociacion() {
+  document.getElementById('asoc-id').value = '';
+  document.getElementById('asoc-predeterminada').checked = false;
+}
+
+// Cierra el menú desplegable al hacer clic en cualquier sección
+document.querySelectorAll('.main-sidebar .nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    document.body.classList.remove('sidebar-open');
+    document.body.classList.add('sidebar-collapse');
+  });
+});
