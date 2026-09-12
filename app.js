@@ -759,7 +759,7 @@ async function guardarPedido(estadoInicial) {
           id_pedido: null,
           id_producto: p.id,
           cantidad: unidadesSueltas,
-          precio: precioUnidad
+          precio: precioUnidad*unidadesSueltas
         });
         montoTotal += unidadesSueltas * precioUnidad;
       }
