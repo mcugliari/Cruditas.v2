@@ -574,29 +574,36 @@ function renderizarGrillaPOS() {
 }
 
 // Obtener precio aplicando la jerarquía (Retorna { unidad, docena })
-function obtenerPrecioProducto(idProd, idCat) {
-  if (!cachePrecios || cachePrecios.length === 0) return { unidad: 0, docena: null };
+function obtenerPrecioProducto(idProd, idCat, idLista = null) {
+  if (!cachePrecios || cachePrecios.length === 0) return { unidad: 0, docena: 0 };
 
   const idP = Number(idProd);
   const idC = Number(idCat);
+  
+  // Si no se pasa idLista, intentamos leer la lista seleccionada en el select del pedido
+  const idL = idLista ? Number(idLista) : Number(document.getElementById('select-lista-pedido')?.value || 0);
+
+  // Filtrar cachePrecios por la lista activa seleccionada (si se usa id_lista_precio)
+  const preciosFiltrados = cachePrecios.filter(p => !idL || Number(p.id_lista_precio || p.id_lista) === idL);
+  const listaABuscar = preciosFiltrados.length > 0 ? preciosFiltrados : cachePrecios;
 
   // 1. Excepción por Producto
-  const pProd = cachePrecios.find(p => p.id_producto !== null && Number(p.id_producto) === idP);
+  const pProd = listaABuscar.find(p => p.id_producto !== null && Number(p.id_producto) === idP);
   if (pProd) {
-    const un = pProd.precio_unidad ?? pProd.precio ?? 0;
-    const doc = pProd.precio_docena ?? null;
-    return { unidad: Number(un), docena: doc ? Number(doc) : null };
+    const un = Number(pProd.precio_unidad ?? pProd.precio ?? 0);
+    const doc = pProd.precio_docena ? Number(pProd.precio_docena) : (un * 12); // Fallback: 12 unidades
+    return { unidad: un, docena: doc };
   }
 
   // 2. Base por Categoría
-  const pCat = cachePrecios.find(p => Number(p.id_categoria) === idC && (p.id_producto === null || p.id_producto === undefined));
+  const pCat = listaABuscar.find(p => Number(p.id_categoria) === idC && (p.id_producto === null || p.id_producto === undefined));
   if (pCat) {
-    const un = pCat.precio_unidad ?? pCat.precio ?? 0;
-    const doc = pCat.precio_docena ?? null;
-    return { unidad: Number(un), docena: doc ? Number(doc) : null };
+    const un = Number(pCat.precio_unidad ?? pCat.precio ?? 0);
+    const doc = pCat.precio_docena ? Number(pCat.precio_docena) : (un * 12); // Fallback: 12 unidades
+    return { unidad: un, docena: doc };
   }
 
-  return { unidad: 0, docena: null };
+  return { unidad: 0, docena: 0 };
 }
 
 // Función auxiliar para calcular docenas + sueltas
@@ -715,12 +722,60 @@ async function guardarPedido(estadoInicial) {
   const idMedio = document.getElementById('select-medio-pago').value;
 
   let montoTotal = 0;
+  const detalles = [];
+
   keys.forEach(idProd => {
-    const p = cacheProductos.find(x => x.id == idProd);
-    montoTotal += carrito[idProd] * obtenerPrecioProducto(p.id, p.id_categoria);
+    const p = cacheProductos.find(x => Number(x.id) === Number(idProd));
+    if (!p) return;
+
+    const cantidadTotal = Number(carrito[idProd]) || 0;
+    if (cantidadTotal <= 0) return;
+
+    // 1. Obtenemos el objeto { unidad, docena }
+    const precios = obtenerPrecioProducto(p.id, p.id_categoria || p.idCategoria, idLista);
+
+    const precioUnidad = precios.unidad || 0;
+    const precioDocena = precios.docena || (precioUnidad * 12);
+
+    // 2. Evaluamos m_permite_docena 
+    const permiteDocena = Boolean(p.m_permite_docena);
+
+    if (permiteDocena && cantidadTotal >= 12) {
+      const cantDocenas = Math.floor(cantidadTotal / 12);
+      const unidadesSueltas = cantidadTotal % 12;
+
+      // Fila por las Docenas
+      detalles.push({
+        id_pedido: null,
+        id_producto: p.id,
+        cantidad: cantDocenas*12,
+        precio: precioDocena
+      });
+      montoTotal += cantDocenas * precioDocena;
+
+      // Fila por las Unidades sueltas remanentes
+      if (unidadesSueltas > 0) {
+        detalles.push({
+          id_pedido: null,
+          id_producto: p.id,
+          cantidad: unidadesSueltas,
+          precio: precioUnidad
+        });
+        montoTotal += unidadesSueltas * precioUnidad;
+      }
+    } else {
+      // Venta por unidades sueltas
+      detalles.push({
+        id_pedido: null,
+        id_producto: p.id,
+        cantidad: cantidadTotal,
+        precio: precioUnidad
+      });
+      montoTotal += cantidadTotal * precioUnidad;
+    }
   });
 
-  // 1. Insertar Cabecera de Pedido
+  // 3. Insertar Cabecera de Pedido
   const { data: pedido, error } = await supabaseClient
     .from('TB_TPEDIDOS')
     .insert([{
@@ -738,20 +793,8 @@ async function guardarPedido(estadoInicial) {
     return;
   }
 
-  // 2. Insertar Detalle de Ítems
-  const detalles = keys.map(idProd => {
-    const p = cacheProductos.find(x => x.id == idProd);
-    const precios = obtenerPrecioProducto(p.id, p.id_categoria || p.idCategoria);
-
-    return {
-      id_pedido: pedido.id,
-      id_producto: p.id,
-      cantidad: carrito[idProd],
-      precio: precios.unidad // Mapeado a la columna 'precio' de TB_DPEDIDOS
-    };
-  });
-
-  await supabaseClient.from('TB_DPEDIDOS').insert(detalles);
+  // 4. Asignar ID de pedido generado e Insertar Detalle
+  detalles.forEach(d => d.id_pedido = pedido.id);
 
   const { error: errorDetalle } = await supabaseClient
     .from('TB_DPEDIDOS')
@@ -802,8 +845,8 @@ async function cargarTablaPedidos() {
   let cantAnulados = 0;
 
   pedidos.forEach(p => {
-    if (p.estado === 'COMPLETADO') totalCobrado += (p.monto_total || 0);
-    if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.monto_total || 0);
+    if (p.estado === 'COMPLETADO') totalCobrado += (p.importe_total || 0);
+    if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.importe_total || 0);
     if (p.estado === 'PENDIENTE') cantPreparacion++;
     if (p.estado === 'ANULADO') cantAnulados++;
   });
@@ -839,7 +882,7 @@ async function cargarTablaPedidos() {
         <td>${hora} hs</td>
         <td class="font-weight-bold">${clienteNombre}</td>
         <td><small class="badge badge-light border">${medioPago}</small></td>
-        <td class="text-right font-weight-bold">$${p.monto_total || 0}</td>
+        <td class="text-right font-weight-bold">$${p.importe_total   || 0}</td>
         <td class="text-center"><span class="badge ${badgeClass} p-2">${estadoTexto}</span></td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
