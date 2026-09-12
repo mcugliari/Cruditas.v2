@@ -509,7 +509,7 @@ async function cargarPOS() {
   const idLista = selectLis && selectLis.value ? parseInt(selectLis.value) : 1;
 
   const { data: categorias } = await supabaseClient.from('TB_BCATEGORIAS').select('*').order('id');
-  const { data: productos } = await supabaseClient.from('TB_BPRODUCTOS').select('*').order('nombre');
+  const { data: productos } = await supabaseClient.from('TB_BPRODUCTOS').select('*').order('id');
   const { data: precios } = await supabaseClient.from('TB_DLISTA_PRECIOS').select('*').eq('id_lista_precio', idLista);
 
   cacheCategorias = categorias || [];
@@ -520,16 +520,19 @@ async function cargarPOS() {
 }
 
 // Dibuja las tarjetas HTML usando los datos en caché
+// Dibuja las tarjetas HTML usando los datos en caché
 function renderizarGrillaPOS() {
   const contenedor = document.getElementById('contenedor-menu-productos');
   if (!contenedor) return;
-  contenedor.innerHTML = '';
+  
+  // 1. Acumulador único para evitar reconstrucciones parciales del DOM
+  let htmlCompleto = '';
 
   cacheCategorias.forEach(cat => {
     const prodsCat = cacheProductos.filter(p => (p.id_categoria || p.idCategoria) === cat.id);
     if (prodsCat.length === 0) return;
 
-    let htmlCat = `
+    htmlCompleto += `
       <div class="pos-cat-header mb-2 mt-2">${cat.nombre}</div>
       <div class="row">
     `;
@@ -538,10 +541,11 @@ function renderizarGrillaPOS() {
       const cant = carrito[p.id] || 0;
       const idCatProd = p.id_categoria || p.idCategoria;
       const precios = obtenerPrecioProducto(p.id, idCatProd);
+      const claseActiva = cant > 0 ? 'pos-card-activa' : '';
 
-      htmlCat += `
-        <div class="col-6 col-sm-6 col-md-4 col-lg-3 mb-3">
-          <div class="card h-100 pos-card-producto border-0">
+      htmlCompleto += `
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
+          <div class="card h-100 pos-card-producto border-0 ${claseActiva}">
             <strong class="pos-prod-title text-truncate" title="${p.nombre}">${p.nombre}</strong>
             <span class="pos-prod-price mb-3">$${precios.unidad.toLocaleString('es-AR')}</span>
             
@@ -560,9 +564,11 @@ function renderizarGrillaPOS() {
       `;
     });
 
-    htmlCat += `</div>`;
-    contenedor.innerHTML += htmlCat;
+    htmlCompleto += `</div>`;
   });
+
+  // 2. Inyección única en el DOM
+  contenedor.innerHTML = htmlCompleto;
 
   actualizarResumenCarrito();
 }
@@ -619,6 +625,15 @@ function alterarCantidad(idProducto, delta) {
   const elCant = document.getElementById(`cant-prod-${idProducto}`);
   if (elCant) {
     elCant.innerText = nueva;
+    const tarjeta = elCant.closest('.pos-card-producto');
+    if (tarjeta) {
+      if (nueva > 0) {
+        tarjeta.classList.add('pos-card-activa');
+      } else {
+        tarjeta.classList.remove('pos-card-activa');
+      }
+    }
+
   } else {
     renderizarGrillaPOS();
   }

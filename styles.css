@@ -70,28 +70,50 @@ body {
   border-color: #cbd5e1 !important;
 }
 
+/* Estado activo para productos seleccionados en el POS */
+.pos-card-producto.pos-card-activa {
+  border: 1.5px solid #2563eb !important;
+  background-color: #f0f6ff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
+  transition: all 0.2s ease-in-out;
+}
+
 /* Ajuste responsive para .pos-card-producto en celulares */
 @media (max-width: 575.98px) {
-  .pos-card-producto .card-body {
+  .pos-card-producto {
     padding: 0.4rem !important;
   }
   
-  .pos-card-producto .card-title {
-    font-size: 0.85rem;
+  .pos-prod-title {
+    font-size: 0.8rem;
     line-height: 1.1;
   }
   
-  .pos-card-producto .card-text {
-    font-size: 0.9rem;
+  .pos-prod-price {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem !important;
   }
 
-  .pos-card-producto img {
-    max-height: 85px;
-    object-fit: contain;
+  /* Píldora de cantidad e incrementos */
+  .pos-qty-pill .btn-pos-sq {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  .pos-cant-num {
+    font-size: 0.8rem;
+    padding: 0 0.2rem;
+  }
+
+  /* Botones de docena (+12u / -12u) */
+  .btn-docena-pill {
+    font-size: 0.68rem !important;
+    padding: 0.2rem 0.25rem !important;
+    white-space: nowrap;
   }
 }
 
-/* Título y Precio */
+/* Título y Precio (Estilos Base) */
 .pos-prod-title {
   font-size: 0.9rem;
   font-weight: 600;
