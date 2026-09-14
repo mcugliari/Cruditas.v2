@@ -130,7 +130,7 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.85rem;    /* Tamaño de fuente calibrado */
+  font-size: 1rem;    /* Tamaño de fuente calibrado */
   line-height: 1.2;       /* Interlineado ajustado */
   min-height: 2.4em;      /* Mantiene la altura pareja en todas las tarjetas */
   margin-bottom: 0.25rem;

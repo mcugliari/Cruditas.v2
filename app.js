@@ -806,7 +806,7 @@ async function guardarPedido(estadoInicial) {
     .single();
 
   if (error) {
-    alert('Error al guardar el pedido: ' + error.message);
+    mostrarNotificacion('Error al guardar el pedido: ' + error.message, 'danger');
     return;
   }
 
@@ -818,11 +818,11 @@ async function guardarPedido(estadoInicial) {
     .insert(detalles);
 
   if (errorDetalle) {
-    alert('Error al guardar el detalle del pedido: ' + errorDetalle.message);
+    mostrarNotificacion('Error al guardar el detalle del pedido: ' + errorDetalle.message, 'danger');
     return;
   }
 
-  alert(`¡Pedido #${pedido.id} registrado correctamente!`);
+  mostrarNotificacion(`¡Pedido #${pedido.id} registrado correctamente!`, 'success');
   resetearPedido();
 }
 
@@ -1144,4 +1144,32 @@ async function verDetallePedido(idPedido) {
     console.error('Error al cargar detalle del pedido:', err);
     alert('Ocurrió un error al cargar el detalle.');
   }
+}
+
+function mostrarNotificacion(mensaje, tipo = 'success') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const idToast = 'toast-' + Date.now();
+  
+  // Iconos y colores según el tipo (success, danger, warning, info)
+  const bgClass = tipo === 'success' ? 'bg-success' : tipo === 'danger' ? 'bg-danger' : 'bg-info';
+  
+  const toastHTML = `
+    <div id="${idToast}" class="toast align-items-center text-white ${bgClass} border-0 show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex p-2">
+        <div class="toast-body font-weight-bold">
+          ${mensaje}
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.insertAdjacentHTML('beforeend', toastHTML);
+
+  // Se auto-elimina suavemente a los 2.5 segundos sin requerir acción del usuario
+  setTimeout(() => {
+    const el = document.getElementById(idToast);
+    if (el) el.remove();
+  }, 2500);
 }
