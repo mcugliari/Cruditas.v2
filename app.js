@@ -1147,29 +1147,53 @@ async function verDetallePedido(idPedido) {
 }
 
 function mostrarNotificacion(mensaje, tipo = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  // 1. Crear contenedor si no existe
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 8px;';
+    document.body.appendChild(container);
+  }
 
-  const idToast = 'toast-' + Date.now();
-  
-  // Iconos y colores según el tipo (success, danger, warning, info)
-  const bgClass = tipo === 'success' ? 'bg-success' : tipo === 'danger' ? 'bg-danger' : 'bg-info';
-  
-  const toastHTML = `
-    <div id="${idToast}" class="toast align-items-center text-white ${bgClass} border-0 show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex p-2">
-        <div class="toast-body font-weight-bold">
-          ${mensaje}
-        </div>
-      </div>
-    </div>
+  // 2. Colores según el tipo
+  const colores = {
+    success: '#28a745',
+    danger: '#dc3545',
+    warning: '#ffc107',
+    info: '#17a2b8'
+  };
+  const colorFondo = colores[tipo] || colores.success;
+  const colorTexto = tipo === 'warning' ? '#212529' : '#ffffff';
+
+  // 3. Crear el elemento de notificación
+  const toast = document.createElement('div');
+  toast.innerText = mensaje;
+  toast.style.cssText = `
+    background-color: ${colorFondo};
+    color: ${colorTexto};
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.25s ease-in-out;
   `;
 
-  container.insertAdjacentHTML('beforeend', toastHTML);
+  container.appendChild(toast);
 
-  // Se auto-elimina suavemente a los 2.5 segundos sin requerir acción del usuario
+  // 4. Mostrar con animación (Entrada)
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  // 5. Ocultar y remover a los 2.5 segundos (Salida)
   setTimeout(() => {
-    const el = document.getElementById(idToast);
-    if (el) el.remove();
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(() => toast.remove(), 250);
   }, 2500);
 }
