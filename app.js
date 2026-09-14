@@ -668,7 +668,10 @@ function actualizarResumenCarrito() {
   keys.forEach(idProd => {
     const p = cacheProductos.find(x => x.id == idProd);
     const cant = carrito[idProd];
-    const idCatProd = p.id_categoria || p.idCategoria;
+    const idCatProd = p.id_categoria;
+    const cat = typeof cacheCategorias !== 'undefined' ? cacheCategorias.find(c => Number(idCatProd) === Number(c.id)) : null;
+    const nombreCat = cat ? cat.nombre : '';
+    const textoProducto = nombreCat ? `${nombreCat} ${p.nombre}` : p.nombre;
     
     const precios = obtenerPrecioProducto(p.id, idCatProd);
     const subtotal = calcularSubtotalItem(cant, precios, p.m_permite_docena);
@@ -686,7 +689,7 @@ function actualizarResumenCarrito() {
     html += `
       <li class="list-group-item d-flex justify-content-between align-items-center p-2 bg-transparent border-bottom">
         <div>
-          <strong class="d-block">${p.nombre}</strong>
+          <strong class="d-block">${textoProducto}</strong>
           <small class="text-muted">${detalleTexto}</small>
         </div>
         <span class="font-weight-bold">$${subtotal.toLocaleString('es-AR')}</span>
@@ -749,7 +752,7 @@ async function guardarPedido(estadoInicial) {
         id_pedido: null,
         id_producto: p.id,
         cantidad: cantDocenas*12,
-        precio: precioDocena
+        precio: precioDocena*cantDocenas
       });
       montoTotal += cantDocenas * precioDocena;
 
@@ -779,6 +782,7 @@ async function guardarPedido(estadoInicial) {
   const { data: pedido, error } = await supabaseClient
     .from('TB_TPEDIDOS')
     .insert([{
+      fecha: new Date().toISOString().split('T')[0],
       id_cliente: idCliente,
       id_lista_precio: idLista,
       id_medio_pago: idMedio,
@@ -826,7 +830,7 @@ async function cargarTablaPedidos() {
 
   let query = supabaseClient
     .from('TB_TPEDIDOS')
-    .select('*, TB_BCLIENTES(nombre), TB_BMEDIO_PAGO(nombre)')
+    .select('id, fecha, created_at, estado, importe_total, TB_BCLIENTES(nombre), TB_BMEDIO_PAGO(nombre)')
     .gte('created_at', fechaDesde)
     .lte('created_at', fechaHasta)
     .order('id', { ascending: false });
@@ -867,6 +871,12 @@ async function cargarTablaPedidos() {
     const clienteNombre = p.TB_BCLIENTES ? p.TB_BCLIENTES.nombre : 'Consumidor Final';
     const medioPago = p.TB_BMEDIO_PAGO ? p.TB_BMEDIO_PAGO.nombre : 'Sin especificar';
     const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const fechaPedido = new Date(`${p.fecha.split('T')[0]}T00:00:00`).toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
 
     let badgeClass = 'badge-secondary';
     let estadoTexto = p.estado;
@@ -879,7 +889,7 @@ async function cargarTablaPedidos() {
     return `
       <tr>
         <td class="font-weight-bold">#${p.id}</td>
-        <td>${hora} hs</td>
+        <td>${fechaPedido} ${hora} hs</td>
         <td class="font-weight-bold">${clienteNombre}</td>
         <td><small class="badge badge-light border">${medioPago}</small></td>
         <td class="text-right font-weight-bold">$${p.importe_total   || 0}</td>
@@ -901,6 +911,10 @@ async function cargarTablaPedidos() {
                 <i class="fas fa-ban"></i>
               </button>
             ` : ''}
+            
+              <button class="btn btn-sm btn-outline-primary" onclick="verDetallePedido(${p.id})" title="Ver detalle">
+                <i class="fas fa-eye"></i>
+              </button>
           </div>
         </td>
       </tr>
@@ -1058,3 +1072,63 @@ document.querySelectorAll('.main-sidebar .nav-link').forEach(link => {
     document.body.classList.add('sidebar-collapse');
   });
 });
+
+// --- VER DETALLE DEL PEDIDO ---
+async function verDetallePedido(idPedido) {
+  try {
+    // Consulta a Supabase adaptada a tu esquema
+    const { data: pedido, error } = await supabaseClient
+      .from('TB_TPEDIDOS')
+      .select(`
+        *,
+        TB_BCLIENTES(nombre),
+        TB_BMEDIO_PAGO(nombre),
+        TB_DPEDIDOS(
+          cantidad,
+          precio,
+          TB_BPRODUCTOS(
+            nombre,
+            TB_BCATEGORIAS(nombre)
+          )
+        )
+      `)
+      .eq('id', idPedido)
+      .single();
+
+    if (error) throw error;
+    if (!pedido) return;
+
+    // Helper para dar formato 99.999,99
+    const formatearMoneda = (val) => Number(val || 0).toLocaleString('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    // Asignación de datos del cabezal
+    document.getElementById('detalle-id-pedido').innerText = pedido.id;
+    document.getElementById('detalle-cliente').innerText = pedido.TB_BCLIENTES?.nombre || 'Consumidor Final';
+    document.getElementById('detalle-medio-pago').innerText = pedido.TB_BMEDIO_PAGO?.nombre || 'Sin especificar';
+    document.getElementById('detalle-monto-total').innerText = `$${formatearMoneda(pedido.importe_total)}`;
+
+    // Mapeo de productos del pedido
+    const items = pedido.TB_DPEDIDOS || [];
+    const htmlItems = items.length > 0 
+      ? items.map(item => `
+          <tr>
+            <td>${item.TB_BPRODUCTOS?.TB_BCATEGORIAS?.nombre} ${item.TB_BPRODUCTOS?.nombre || 'Producto'}</td>
+            <td class="text-center">${item.cantidad}</td>
+            <td class="text-right">$${formatearMoneda(item.precio)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="4" class="text-center text-muted">No hay ítems registrados.</td></tr>`;
+
+    document.getElementById('tabla-detalle-body').innerHTML = htmlItems;
+
+    // Mostrar modal con jQuery / Bootstrap 4
+    $('#modalDetallePedido').modal('show');
+
+  } catch (err) {
+    console.error('Error al cargar detalle del pedido:', err);
+    alert('Ocurrió un error al cargar el detalle.');
+  }
+}
