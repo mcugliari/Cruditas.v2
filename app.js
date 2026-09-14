@@ -524,13 +524,25 @@ async function cargarPOS() {
 function renderizarGrillaPOS() {
   const contenedor = document.getElementById('contenedor-menu-productos');
   if (!contenedor) return;
+
+  // Control de seguridad por si las cachés aún no se cargaron
+  if (!Array.isArray(cacheCategorias) || !Array.isArray(cacheProductos)) {
+    contenedor.innerHTML = '<p class="text-muted text-center my-3">Cargando menú...</p>';
+    return;
+  }
+
+  // Paleta de colores fija para las categorías (Bootstrap)
+  const paletaColores = ['primary', 'success', 'warning', 'danger', 'info', 'secondary'];
   
   // 1. Acumulador único para evitar reconstrucciones parciales del DOM
   let htmlCompleto = '';
 
-  cacheCategorias.forEach(cat => {
-    const prodsCat = cacheProductos.filter(p => (p.id_categoria || p.idCategoria) === cat.id);
+  cacheCategorias.forEach((cat, index) => {
+    const prodsCat = cacheProductos.filter(p => Number(p.id_categoria || p.idCategoria) === Number(cat.id));
     if (prodsCat.length === 0) return;
+
+    // Asignación consistente de color según el índice de la categoría
+    const colorCat = paletaColores[index % paletaColores.length];
 
     htmlCompleto += `
       <div class="pos-cat-header mb-2 mt-2">${cat.nombre}</div>
@@ -545,20 +557,21 @@ function renderizarGrillaPOS() {
 
       htmlCompleto += `
         <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
-          <div class="card h-100 pos-card-producto border-0 ${claseActiva}">
-            <strong class="pos-prod-title text-truncate" title="${p.nombre}">${p.nombre}</strong>
+          <div class="card h-100 pos-card-producto border-0 border-left-${colorCat} ${claseActiva}">
+            <strong class="pos-prod-title" title="${p.nombre}">${p.nombre}</strong>
             <span class="pos-prod-price mb-3">$${precios.unidad.toLocaleString('es-AR')}</span>
             
             <div class="pos-qty-pill mb-2">
-              <button class="btn btn-pos-sq" onclick="alterarCantidad(${p.id}, -1)">-</button>
+              <button type="button" class="btn btn-pos-sq" onclick="alterarCantidad(${p.id}, -1)">-</button>
               <span class="pos-cant-num" id="cant-prod-${p.id}">${cant}</span>
-              <button class="btn btn-pos-sq" onclick="alterarCantidad(${p.id}, 1)">+</button>
+              <button type="button" class="btn btn-pos-sq" onclick="alterarCantidad(${p.id}, 1)">+</button>
             </div>
 
-            <div class="d-flex justify-content-between">
-              <button class="btn btn-docena-pill" onclick="alterarCantidad(${p.id}, -12)">-12 u.</button>
-              <button class="btn btn-docena-pill" onclick="alterarCantidad(${p.id}, 12)">+12 u.</button>
+            <div class="d-flex justify-content-between gap-1">
+              <button type="button" class="btn btn-docena-pill flex-fill mr-1" onclick="alterarCantidad(${p.id}, -12)">-12 u.</button>
+              <button type="button" class="btn btn-docena-pill flex-fill" onclick="alterarCantidad(${p.id}, 12)">+12 u.</button>
             </div>
+
           </div>
         </div>
       `;

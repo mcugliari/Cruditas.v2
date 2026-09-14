@@ -78,6 +78,15 @@ body {
   transition: all 0.2s ease-in-out;
 }
 
+/* --- NUEVOS BORDES DE COLOR POR CATEGORÍA --- */
+.pos-card-producto.border-left-primary   { border-left: 5px solid #007bff !important; }
+.pos-card-producto.border-left-success   { border-left: 5px solid #28a745 !important; }
+.pos-card-producto.border-left-warning   { border-left: 5px solid #ffc107 !important; }
+.pos-card-producto.border-left-danger    { border-left: 5px solid #dc3545 !important; }
+.pos-card-producto.border-left-info      { border-left: 5px solid #17a2b8 !important; }
+.pos-card-producto.border-left-secondary { border-left: 5px solid #6c757d !important; }
+
+
 /* Ajuste responsive para .pos-card-producto en celulares */
 @media (max-width: 575.98px) {
   .pos-card-producto {
@@ -114,11 +123,17 @@ body {
 }
 
 /* Título y Precio (Estilos Base) */
+/* Nombre de producto en un máximo de 2 líneas */
 .pos-prod-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Máximo 2 renglones */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;    /* Tamaño de fuente calibrado */
+  line-height: 1.2;       /* Interlineado ajustado */
+  min-height: 2.4em;      /* Mantiene la altura pareja en todas las tarjetas */
+  margin-bottom: 0.25rem;
 }
 
 .pos-prod-price {
@@ -127,72 +142,76 @@ body {
   color: #2563eb;
 }
 
-/* Pastilla Central de Contador (- 0 +) */
+/* --- BOTONES DE CANTIDAD POS --- */
+
+/* Píldora contenedora de la cantidad individual */
 .pos-qty-pill {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 2px 6px;
+  background-color: #f1f5f9;
+  border-radius: 50rem;
+  padding: 3px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border: 1px solid #e2e8f0;
 }
 
+/* Botones + y - individuales */
 .btn-pos-sq {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid #cbd5e1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% !important;
+  border: none;
   background-color: #ffffff;
   color: #334155;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease-in-out;
+  padding: 0;
 }
 
 .btn-pos-sq:hover {
   background-color: #2563eb;
   color: #ffffff;
-  border-color: #2563eb;
+  transform: scale(1.05);
 }
 
 .btn-pos-sq:active {
-  transform: scale(0.92);
+  transform: scale(0.95);
 }
 
+/* Número de cantidad actual */
 .pos-cant-num {
   font-weight: 700;
-  font-size: 0.9rem;
   color: #0f172a;
+  font-size: 0.95rem;
   min-width: 20px;
+  text-align: center;
 }
 
-/* Botones de Docena (-12 u. / +12 u.) */
+/* Botones de Docena / Bulto (+12 / -12) */
 .btn-docena-pill {
-  font-size: 0.72rem;
-  font-weight: 600;
-  background-color: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  background-color: #ffffff;
   color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
   padding: 3px 8px;
-  transition: all 0.15s ease;
+  border-radius: 6px;
+  transition: all 0.15s ease-in-out;
 }
 
 .btn-docena-pill:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
-  border-color: #94a3b8;
+  background-color: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
 }
 
 .btn-docena-pill:active {
-  background-color: #e2e8f0;
+  transform: scale(0.95);
 }
 
 /* --- ESTILIZACIÓN DE BOTONES DE ACCIÓN (POS) --- */
