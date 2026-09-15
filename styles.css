@@ -215,79 +215,108 @@ body {
 }
 
 /* --- ESTILIZACIÓN DE BOTONES DE ACCIÓN (POS) --- */
-
-/* Botón 'Solo Preparar' */
-.btn-outline-info {
-  color: #2563eb !important;
-  border-color: #cbd5e1 !important;
-  background-color: #ffffff !important;
-  border-radius: 8px !important;
-  padding: 8px 12px !important;
-  transition: all 0.2s ease !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+/* --- BOTONERA POS PREMIUM --- */
+.pos-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Separación vertical real entre filas */
+  margin-top: 15px;
 }
 
-.btn-outline-info:hover {
-  background-color: #eff6ff !important;
-  border-color: #93c5fd !important;
-  color: #1d4ed8 !important;
+.pos-btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* 3 columnas de igual tamaño */
+  gap: 10px; /* Separación horizontal entre botones */
 }
 
-/* Botón 'Entregar Impago' (Outline Warning) */
-.btn-outline-warning {
-  color: #d97706 !important;
-  border-color: #cbd5e1 !important;
-  background-color: #ffffff !important;
-  border-radius: 8px !important;
-  padding: 8px 12px !important;
-  transition: all 0.2s ease !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+/* --- BOTONERA POS PREMIUM --- */
+.pos-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
 }
 
-.btn-outline-warning:hover {
-  background-color: #fffbeb !important;
-  border-color: #fcd34d !important;
-  color: #b45309 !important;
+.pos-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-/* Botón 'Limpiar' */
-.btn-danger {
-  background-color: #ffffff !important;
-  border: 1px solid #fca5a5 !important;
-  color: #ef4444 !important;
-  border-radius: 8px !important;
-  padding: 8px 12px !important;
-  font-size: 0.85rem !important;
-  transition: all 0.2s ease !important;
+/* Estilo base de botones secundarios */
+.btn-pos-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 6px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1.55px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #334155;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
-.btn-danger:hover {
-  background-color: #fef2f2 !important;
-  border-color: #f87171 !important;
-  color: #dc2626 !important;
+.btn-pos-action span {
+  margin-top: 4px;
 }
 
-/* Botón 'Cobrar y Entregar' (Principal) */
-.btn-success {
-  background-color: #10b981 !important;
-  border: none !important;
-  color: #ffffff !important;
-  border-radius: 8px !important;
-  padding: 10px 16px !important;
-  font-size: 0.95rem !important;
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2) !important;
-  transition: all 0.2s ease !important;
+/* Hover de botones secundarios (Corregido) */
+.btn-pos-preparar:hover {
+  background-color: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
 }
 
-.btn-success:hover {
-  background-color: #059669 !important;
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3) !important;
-  transform: translateY(-1px);
+.btn-pos-impago:hover {
+  background-color: #fffbe8; /* Corregido */
+  border-color: #f59e0b;
+  color: #b45309;
 }
 
-.btn-success:active {
+.btn-pos-limpiar:hover {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.btn-pos-action:active {
+  transform: scale(0.97);
+}
+
+/* BOTÓN PRINCIPAL (Cobrar y Entregar) */
+.btn-pos-cobrar {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-pos-cobrar:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+  color: #ffffff;
+}
+
+.btn-pos-cobrar:active {
   transform: translateY(0);
 }
+
 
 /* Ocultar la barra al 100% fuera de la pantalla cuando está colapsada */
 body.sidebar-collapse .main-sidebar {

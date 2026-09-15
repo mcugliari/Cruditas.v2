@@ -152,29 +152,28 @@
             </div>
 
             <!-- Guardar Según Estado Inicial -->
-            <div class="row mb-2">
-                <div class="col-6">
-                <button class="btn btn-sm btn-outline-info btn-block font-weight-bold" onclick="guardarPedido('PENDIENTE')">
-                    ⏳ Solo Preparar
+            <div class="pos-actions-container">
+  
+              <!-- Fila 1: Opciones Secundarias alineadas a 3 columnas -->
+              <div class="pos-btn-grid">
+                <button type="button" class="btn btn-pos-action btn-pos-preparar" onclick="guardarPedido('preparar')">
+                  ⏳ <span>Solo Preparar</span>
                 </button>
-                </div>
-                <div class="col-6">
-                <button class="btn btn-sm btn-outline-warning btn-block font-weight-bold" onclick="guardarPedido('ENTREGADO_IMPAGO')">
-                    📦 Entregar Impago
+                
+                <button type="button" class="btn btn-pos-action btn-pos-impago" onclick="guardarPedido('impago')">
+                  📦 <span>Entregar Impago</span>
                 </button>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-4">
-                <button class="btn btn-danger btn-block font-weight-bold" onclick="resetearPedido()">
-                    Limpiar
+            
+                <button type="button" class="btn btn-pos-action btn-pos-limpiar" onclick="vaciarCarrito()">
+                  🗑️ <span>Limpiar</span>
                 </button>
-                </div>
-                <div class="col-8">
-                <button class="btn btn-success btn-block font-weight-bold" onclick="guardarPedido('COMPLETADO')">
-                    ✅ Cobrar y Entregar
-                </button>
-                </div>
+              </div>
+            
+              <!-- Fila 2: Acción Principal Táctil y Destacada -->
+              <button type="button" class="btn btn-pos-cobrar" onclick="guardarPedido('cobrar')">
+                ✅ COBRAR Y ENTREGAR
+              </button>
+            
             </div>
 
             </div>
