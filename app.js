@@ -901,12 +901,62 @@ async function cargarTablaPedidos() {
     let badgeClass = 'badge-secondary';
     let estadoTexto = p.estado;
 
-    // Mapeo de estilos según estado
+    // Badges de Estado
     if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') { badgeClass = 'badge-info'; estadoTexto = '⏳ En Preparación'; }
     if (p.estado === 'PREPARADO') { badgeClass = 'badge-primary'; estadoTexto = '🔔 Preparado'; }
     if (p.estado === 'ENTREGADO_IMPAGO') { badgeClass = 'badge-warning'; estadoTexto = '📦 Entregado (Impago)'; }
     if (p.estado === 'COMPLETADO') { badgeClass = 'badge-success'; estadoTexto = '✅ Completado'; }
     if (p.estado === 'ANULADO') { badgeClass = 'badge-danger'; estadoTexto = '🚫 Anulado'; }
+
+    // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
+   // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
+    let botonesAccion = '';
+
+    // 1. Si está EN PREPARACIÓN -> Solo puede pasar a PREPARADO
+    if (p.estado === 'PREPARATION' || p.estado === 'PENDIENTE') {
+      botonesAccion += `
+        <button class="btn btn-outline-primary" title="Marcar como Preparado (Listo)" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
+          <i class="fas fa-box-open"></i>
+        </button>
+      `;
+    }
+
+    // 2. Si ya está PREPARADO -> Se puede Cobrar/Entregar o Entregar Impago
+    if (p.estado === 'PREPARADO') {
+      botonesAccion += `
+        <button class="btn btn-outline-success" title="Cobrar y Entregar" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
+          <i class="fas fa-check"></i>
+        </button>
+        <button class="btn btn-outline-warning" title="Entregar sin Cobrar (Impago)" onclick="cambiarEstadoPedido(${p.id}, 'ENTREGADO_IMPAGO')">
+          <i class="fas fa-truck"></i>
+        </button>
+      `;
+    }
+
+    // 3. Si está ENTREGADO IMPAGO -> Solo queda cobrarlo para pasar a COMPLETADO
+    if (p.estado === 'ENTREGADO_IMPAGO') {
+      botonesAccion += `
+        <button class="btn btn-outline-success" title="Registrar Cobro" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
+          <i class="fas fa-dollar-sign"></i>
+        </button>
+      `;
+    }
+
+    // 4. Botón de ANULAR (Habilitado para TODOS los estados excepto los que YA están ANULADOS)
+    if (p.estado !== 'ANULADO') {
+      botonesAccion += `
+        <button class="btn btn-outline-danger" title="Anular Pedido" onclick="cambiarEstadoPedido(${p.id}, 'ANULADO')">
+          <i class="fas fa-ban"></i>
+        </button>
+      `;
+    }
+
+    // 5. Botón VER DETALLE (siempre visible)
+    botonesAccion += `
+      <button class="btn btn-outline-info" onclick="verDetallePedido(${p.id})" title="Ver detalle">
+        <i class="fas fa-eye"></i>
+      </button>
+    `;
 
     return `
       <tr>
@@ -918,40 +968,7 @@ async function cargarTablaPedidos() {
         <td class="text-center"><span class="badge ${badgeClass} p-2">${estadoTexto}</span></td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
-            
-            <!-- 1. Pasaje de EN PREPARACIÓN a PREPARADO (Cocina/Mostrador) -->
-            ${(p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') ? `
-              <button class="btn btn-outline-primary" title="Marcar como Preparado (Listo)" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
-                <i class="fas fa-box-open"></i>
-              </button>
-            ` : ''}
-
-            <!-- 2. Pasaje a COBRADO Y COMPLETADO -->
-            ${p.estado !== 'COMPLETADO' && p.estado !== 'ANULADO' ? `
-              <button class="btn btn-outline-success" title="Marcar como Cobrado / Entregado" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
-                <i class="fas fa-check"></i>
-              </button>
-            ` : ''}
-
-            <!-- 3. Pasaje a ENTREGADO IMPAGO -->
-            ${p.estado !== 'ENTREGADO_IMPAGO' && p.estado !== 'COMPLETADO' && p.estado !== 'ANULADO' ? `
-              <button class="btn btn-outline-warning" title="Entregar sin Cobrar (Impago)" onclick="cambiarEstadoPedido(${p.id}, 'ENTREGADO_IMPAGO')">
-                <i class="fas fa-truck"></i>
-              </button>
-            ` : ''}
-
-            <!-- 4. ANULAR PEDIDO -->
-            ${p.estado !== 'ANULADO' ? `
-              <button class="btn btn-outline-danger" title="Anular Pedido" onclick="cambiarEstadoPedido(${p.id}, 'ANULADO')">
-                <i class="fas fa-ban"></i>
-              </button>
-            ` : ''}
-            
-            <!-- 5. VER DETALLE -->
-            <button class="btn btn-outline-info" onclick="verDetallePedido(${p.id})" title="Ver detalle">
-              <i class="fas fa-eye"></i>
-            </button>
-
+            ${botonesAccion}
           </div>
         </td>
       </tr>
