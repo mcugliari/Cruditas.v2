@@ -859,18 +859,25 @@ async function cargarTablaPedidos() {
   let totalCobrado = 0;
   let totalPendienteCobro = 0;
   let cantPreparacion = 0;
+  let cantPreparados = 0; // NUEVA VARIABLE
   let cantAnulados = 0;
 
   pedidos.forEach(p => {
     if (p.estado === 'COMPLETADO') totalCobrado += (p.importe_total || 0);
     if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.importe_total || 0);
-    if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE' || p.estado === 'PREPARADO') cantPreparacion++;
+    
+    // Separamos la cuenta de "En preparación" y "Preparados"
+    if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') cantPreparacion++;
+    if (p.estado === 'PREPARADO') cantPreparados++;
+    
     if (p.estado === 'ANULADO') cantAnulados++;
   });
 
-  document.getElementById('kpi-total-cobrado').innerText = `$${totalCobrado.toLocaleString()}`;
-  document.getElementById('kpi-total-pendiente-cobro').innerText = `$${totalPendienteCobro.toLocaleString()}`;
+  // Imprimimos en pantalla
+  document.getElementById('kpi-total-cobrado').innerText = `$${totalCobrado.toLocaleString('es-AR')}`;
+  document.getElementById('kpi-total-pendiente-cobro').innerText = `$${totalPendienteCobro.toLocaleString('es-AR')}`;
   document.getElementById('kpi-cant-preparacion').innerText = cantPreparacion;
+  document.getElementById('kpi-cant-preparados').innerText = cantPreparados; // SE ACTUALIZA EL NUEVO KPI
   document.getElementById('kpi-cant-anulados').innerText = cantAnulados;
 
   // Renderizar Tabla
