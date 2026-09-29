@@ -156,11 +156,11 @@
   
               <!-- Fila 1: Opciones Secundarias alineadas a 3 columnas -->
               <div class="pos-btn-grid">
-                <button type="button" class="btn btn-pos-action btn-pos-preparar" onclick="guardarPedido('preparar')">
+                <button type="button" class="btn btn-pos-action btn-pos-preparar" onclick="guardarPedido('PREPARAR')">
                   ⏳ <span>Solo Preparar</span>
                 </button>
                 
-                <button type="button" class="btn btn-pos-action btn-pos-impago" onclick="guardarPedido('impago')">
+                <button type="button" class="btn btn-pos-action btn-pos-impago" onclick="guardarPedido('ENTREGADO_IMPAGO')">
                   📦 <span>Entregar Impago</span>
                 </button>
             
@@ -170,7 +170,7 @@
               </div>
             
               <!-- Fila 2: Acción Principal Táctil y Destacada -->
-              <button type="button" class="btn btn-pos-cobrar" onclick="guardarPedido('cobrado')">
+              <button type="button" class="btn btn-pos-cobrar" onclick="guardarPedido('COMPLETADO')">
                 ✅ COBRAR Y ENTREGAR
               </button>
             
