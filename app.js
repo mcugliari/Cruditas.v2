@@ -913,7 +913,7 @@ async function cargarTablaPedidos() {
     let botonesAccion = '';
 
     // 1. Si está EN PREPARACIÓN -> Solo puede pasar a PREPARADO
-    if (p.estado === 'PREPARATION' || p.estado === 'PENDIENTE') {
+    if (p.estado === 'PREPARACION') {
       botonesAccion += `
         <button class="btn btn-outline-primary" title="Marcar como Preparado (Listo)" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
           <i class="fas fa-box-open"></i>
