@@ -855,7 +855,7 @@ async function cargarTablaPedidos() {
   const { data: pedidos, error } = await query;
   if (error) return;
 
-  // Calculo de KPIs
+ // Cálculo de KPIs actualizado con los nuevos estados
   let totalCobrado = 0;
   let totalPendienteCobro = 0;
   let cantPreparacion = 0;
@@ -864,7 +864,7 @@ async function cargarTablaPedidos() {
   pedidos.forEach(p => {
     if (p.estado === 'COMPLETADO') totalCobrado += (p.importe_total || 0);
     if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.importe_total || 0);
-    if (p.estado === 'PENDIENTE') cantPreparacion++;
+    if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE' || p.estado === 'PREPARADO') cantPreparacion++;
     if (p.estado === 'ANULADO') cantAnulados++;
   });
 
@@ -894,7 +894,9 @@ async function cargarTablaPedidos() {
     let badgeClass = 'badge-secondary';
     let estadoTexto = p.estado;
 
-    if (p.estado === 'PENDIENTE') { badgeClass = 'badge-info'; estadoTexto = '⏳ Pendiente'; }
+    // Mapeo visual de cada estado
+    if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') { badgeClass = 'badge-info'; estadoTexto = '⏳ En Preparación'; }
+    if (p.estado === 'PREPARADO') { badgeClass = 'badge-primary'; estadoTexto = '🔔 Preparado'; }
     if (p.estado === 'ENTREGADO_IMPAGO') { badgeClass = 'badge-warning'; estadoTexto = '📦 Entregado (Impago)'; }
     if (p.estado === 'COMPLETADO') { badgeClass = 'badge-success'; estadoTexto = '✅ Completado'; }
     if (p.estado === 'ANULADO') { badgeClass = 'badge-danger'; estadoTexto = '🚫 Anulado'; }
@@ -905,17 +907,20 @@ async function cargarTablaPedidos() {
         <td>${fechaPedido} ${hora} hs</td>
         <td class="font-weight-bold">${clienteNombre}</td>
         <td><small class="badge badge-light border">${medioPago}</small></td>
-        <td class="text-right font-weight-bold">$${p.importe_total   || 0}</td>
+        <td class="text-right font-weight-bold">$${p.importe_total || 0}</td>
         <td class="text-center"><span class="badge ${badgeClass} p-2">${estadoTexto}</span></td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
             ${p.estado !== 'COMPLETADO' && p.estado !== 'ANULADO' ? `
+              <button class="btn btn-outline-primary" title="Marcar como Preparado" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
+                <i class="fas fa-box-open"></i>
+              </button>
               <button class="btn btn-outline-success" title="Marcar como Cobrado" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
                 <i class="fas fa-check"></i>
               </button>
             ` : ''}
-            ${p.estado === 'PENDIENTE' ? `
-              <button class="btn btn-outline-warning" title="Entregar sin Cobrar" onclick="cambiarEstadoPedido(${p.id}, 'ENTREGADO_IMPAGO')">
+            ${p.estado !== 'ENTREGADO_IMPAGO' && p.estado !== 'COMPLETADO' && p.estado !== 'ANULADO' ? `
+              <button class="btn btn-outline-warning" title="Entregar sin Cobrar (Impago)" onclick="cambiarEstadoPedido(${p.id}, 'ENTREGADO_IMPAGO')">
                 <i class="fas fa-truck"></i>
               </button>
             ` : ''}
@@ -924,10 +929,9 @@ async function cargarTablaPedidos() {
                 <i class="fas fa-ban"></i>
               </button>
             ` : ''}
-            
-              <button class="btn btn-sm btn-outline-primary" onclick="verDetallePedido(${p.id})" title="Ver detalle">
-                <i class="fas fa-eye"></i>
-              </button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="verDetallePedido(${p.id})" title="Ver detalle">
+              <i class="fas fa-eye"></i>
+            </button>
           </div>
         </td>
       </tr>
