@@ -153,28 +153,26 @@
 
             <!-- Guardar Según Estado Inicial -->
             <div class="pos-actions-container">
-  
-              <!-- Fila 1: Opciones Secundarias alineadas a 3 columnas -->
-              <div class="pos-btn-grid">
-                <button type="button" class="btn btn-pos-action btn-pos-preparar" onclick="guardarPedido('PREPARAR')">
-                  ⏳ <span>Solo Preparar</span>
-                </button>
-                
-                <button type="button" class="btn btn-pos-action btn-pos-impago" onclick="guardarPedido('ENTREGADO_IMPAGO')">
-                  📦 <span>Entregar Impago</span>
-                </button>
-            
-                <button type="button" class="btn btn-pos-action btn-pos-limpiar" onclick="vaciarCarrito()">
-                  🗑️ <span>Limpiar</span>
+                <!-- Fila 1: Opciones Secundarias -->
+                <div class="pos-btn-grid">
+                  <button type="button" class="btn btn-pos-action btn-pos-preparar" onclick="guardarPedido('PREPARACION')">
+                    ⏳ <span>Solo Preparar</span>
+                  </button>
+                  
+                  <button type="button" class="btn btn-pos-action btn-pos-impago" onclick="guardarPedido('ENTREGADO_IMPAGO')">
+                    📦 <span>Entregar Impago</span>
+                  </button>
+              
+                  <button type="button" class="btn btn-pos-action btn-pos-limpiar" onclick="vaciarCarrito()">
+                    🗑️ <span>Limpiar</span>
+                  </button>
+                </div>
+              
+                <!-- Fila 2: Acción Principal -->
+                <button type="button" class="btn btn-pos-cobrar" onclick="guardarPedido('COMPLETADO')">
+                  ✅ COBRAR Y ENTREGAR
                 </button>
               </div>
-            
-              <!-- Fila 2: Acción Principal Táctil y Destacada -->
-              <button type="button" class="btn btn-pos-cobrar" onclick="guardarPedido('COMPLETADO')">
-                ✅ COBRAR Y ENTREGAR
-              </button>
-            
-            </div>
 
             </div>
         </div>
@@ -203,9 +201,10 @@
             </div>
             <div class="col-md-3">
             <label class="small font-weight-bold">Estado del Pedido:</label>
-            <select class="form-control form-control-sm" id="filtro-estado-pedido" onchange="cargarTablaPedidos()">
+           <select class="form-control form-control-sm" id="filtro-estado-pedido" onchange="cargarTablaPedidos()">
                 <option value="TODOS">-- Todos los Estados --</option>
-                <option value="PENDIENTE">⏳ Pendiente (En preparación)</option>
+                <option value="PREPARACION">⏳ En Preparación</option>
+                <option value="PREPARADO">🔔 Preparado (Listo)</option>
                 <option value="ENTREGADO_IMPAGO">📦 Entregado (Impago)</option>
                 <option value="COMPLETADO">✅ Completado (Cobrado)</option>
                 <option value="ANULADO">🚫 Anulado</option>
