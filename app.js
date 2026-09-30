@@ -3,7 +3,12 @@ const SUPABASE_KEY = "sb_publishable_RzqmU62ZqTbjc5LFFvs13A_T-3uQUiH";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// --- ESTADO GLOBAL DE LA APLICACIÓN ---
 let pedidoEditandoId = null; // null = Nuevo pedido; ID = Editando existente
+let carrito = {};            // { idProducto: cantidad }
+let cacheProductos = [];
+let cachePrecios = [];
+let cacheCategorias = [];
 
 function navegarA(seccionId, elementoMenu) {
   // 1. Ocultar todas las secciones
@@ -38,10 +43,9 @@ function navegarA(seccionId, elementoMenu) {
   } else if (seccionId === 'pedidos-dia') {
     cargarTablaPedidos(); // Carga el listado/gestión de pedidos del día
   }
-
 }
 
-// 1. LEER (READ)
+// --- MÓDULO CLIENTES ---
 async function cargarClientes() {
   const tbody = document.getElementById('tabla-clientes-body');
   
@@ -61,7 +65,6 @@ async function cargarClientes() {
     return;
   }
 
-  // Renderizar filas con botones de acción (Editar / Eliminar)
   tbody.innerHTML = clientes.map(cli => `
     <tr>
       <td><span class="badge badge-secondary">#${cli.id}</span></td>
@@ -80,7 +83,6 @@ async function cargarClientes() {
   `).join('');
 }
 
-// 2. CREAR (CREATE)
 async function guardarCliente(event) {
   event.preventDefault();
 
@@ -100,8 +102,6 @@ async function guardarCliente(event) {
   }
 }
 
-// 3. ACTUALIZAR (UPDATE)
-// Abre el modal y rellena los campos con los datos actuales
 function abrirModalEditar(id, nombre, telefono, direccion) {
   document.getElementById('edit-cli-id').value = id;
   document.getElementById('edit-cli-nombre').value = nombre;
@@ -111,7 +111,6 @@ function abrirModalEditar(id, nombre, telefono, direccion) {
   $('#modal-editar-cliente').modal('show');
 }
 
-// Envía el UPDATE a Supabase
 async function guardarEdicionCliente(event) {
   event.preventDefault();
 
@@ -123,7 +122,7 @@ async function guardarEdicionCliente(event) {
   const { error } = await supabaseClient
     .from('TB_BCLIENTES')
     .update({ nombre, telefono, direccion })
-    .eq('id', id); // .eq indica la condición WHERE id = X
+    .eq('id', id);
 
   if (error) {
     alert('Error al actualizar cliente: ' + error.message);
@@ -133,7 +132,6 @@ async function guardarEdicionCliente(event) {
   }
 }
 
-// 4. ELIMINAR (DELETE)
 async function eliminarCliente(id, nombre) {
   if (confirm(`¿Estás seguro de que querés eliminar a ${nombre}?`)) {
     const { error } = await supabaseClient
@@ -150,14 +148,20 @@ async function eliminarCliente(id, nombre) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Activa por defecto la vista de Toma de Pedidos
   const linkPedidos = document.querySelector('a[onclick*="pedidos"]');
   navegarA('pedidos', linkPedidos);
-}); // FIN DOMContentLoaded
+});
 
-// 1. CARGAR CATEGORÍAS EN SELECTS
+// --- MÓDULO PRODUCTOS ---
 async function cargarCategoriasSelect() {
-  if (cacheCategorias.length > 0) return;
+  if (cacheCategorias && cacheCategorias.length > 0) {
+    const select = document.getElementById('prod-categoria');
+    if (select) {
+      select.innerHTML = '<option value="">-- Seleccionar Categoría --</option>' + 
+        cacheCategorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    }
+    return;
+  }
 
   const { data: categorias, error } = await supabaseClient
     .from('TB_BCATEGORIAS')
@@ -167,12 +171,13 @@ async function cargarCategoriasSelect() {
   if (!error && categorias) {
     cacheCategorias = categorias;
     const select = document.getElementById('prod-categoria');
-    select.innerHTML = '<option value="">-- Seleccionar Categoría --</option>' + 
-      categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    if (select) {
+      select.innerHTML = '<option value="">-- Seleccionar Categoría --</option>' + 
+        categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    }
   }
 }
 
-// 2. LEER PRODUCTOS (Con JOIN a Categorías)
 async function cargarProductos() {
   await cargarCategoriasSelect();
   const tbody = document.getElementById('tabla-productos-body');
@@ -224,7 +229,6 @@ async function cargarProductos() {
   `).join('');
 }
 
-// 3. NUEVO PRODUCTO (Abre Modal)
 function abrirModalNuevoProducto() {
   document.getElementById('prod-id').value = '';
   document.getElementById('form-producto').reset();
@@ -232,7 +236,6 @@ function abrirModalNuevoProducto() {
   $('#modal-producto').modal('show');
 }
 
-// 4. EDITAR PRODUCTO (Abre Modal cargado)
 function abrirModalEditarProducto(id, nombre, id_categoria, permiteDocena) {
   document.getElementById('prod-id').value = id;
   document.getElementById('prod-nombre').value = nombre;
@@ -242,7 +245,6 @@ function abrirModalEditarProducto(id, nombre, id_categoria, permiteDocena) {
   $('#modal-producto').modal('show');
 }
 
-// 5. GUARDAR (Crear o Actualizar)
 async function guardarProducto(event) {
   event.preventDefault();
 
@@ -251,25 +253,11 @@ async function guardarProducto(event) {
   const id_categoria = document.getElementById('prod-categoria').value;
   const m_permite_docena = document.getElementById('prod-permite-docena').checked;
 
-  const payload = {
-    nombre,
-    id_categoria,
-    m_permite_docena
-  };
+  const payload = { nombre, id_categoria, m_permite_docena };
 
-  let result;
-  if (id) {
-    // UPDATE
-    result = await supabaseClient
-      .from('TB_BPRODUCTOS')
-      .update(payload)
-      .eq('id', id);
-  } else {
-    // INSERT
-    result = await supabaseClient
-      .from('TB_BPRODUCTOS')
-      .insert([payload]);
-  }
+  let result = id 
+    ? await supabaseClient.from('TB_BPRODUCTOS').update(payload).eq('id', id)
+    : await supabaseClient.from('TB_BPRODUCTOS').insert([payload]);
 
   if (result.error) {
     alert('Error al guardar producto: ' + result.error.message);
@@ -279,28 +267,18 @@ async function guardarProducto(event) {
   }
 }
 
-// 6. ELIMINAR PRODUCTO
 async function eliminarProducto(id, nombre) {
   if (confirm(`¿Estás seguro de borrar "${nombre}"?`)) {
-    const { error } = await supabaseClient
-      .from('TB_BPRODUCTOS')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert('Error al eliminar: ' + error.message);
-    } else {
-      cargarProductos();
-    }
+    const { error } = await supabaseClient.from('TB_BPRODUCTOS').delete().eq('id', id);
+    if (error) alert('Error al eliminar: ' + error.message);
+    else cargarProductos();
   }
 }
 
-// 1. CARGAR CÓDIGO AL NAVEGAR A LISTAS DE PRECIOS
-// (Recordá agregar 'listas' en tu función navegarA)
-
+// --- MÓDULO LISTAS DE PRECIOS ---
 async function inicializarModuloListas() {
   const select = document.getElementById('select-lista-activa');
-  if (select.children.length > 1 && select.value !== '') return; // Ya cargado
+  if (select.children.length > 1 && select.value !== '') return;
 
   const { data: listas, error } = await supabaseClient
     .from('TB_TLISTA_PRECIOS')
@@ -313,23 +291,13 @@ async function inicializarModuloListas() {
   }
 }
 
-// 2. CARGAR MATRIZ DE PRECIOS SEGÚN LA LISTA SELECCIONADA
 async function cargarMatrizPrecios() {
   const idLista = document.getElementById('select-lista-activa').value;
   if (!idLista) return;
 
-  // Cargar Precios Base por Categoría
-  const { data: categorias } = await supabaseClient
-    .from('TB_BCATEGORIAS')
-    .select('*')
-    .order('id', { ascending: true });
+  const { data: categorias } = await supabaseClient.from('TB_BCATEGORIAS').select('*').order('id', { ascending: true });
+  const { data: preciosExistentes } = await supabaseClient.from('TB_DLISTA_PRECIOS').select('*').eq('id_lista_precio', idLista);
 
-  const { data: preciosExistentes } = await supabaseClient
-    .from('TB_DLISTA_PRECIOS')
-    .select('*')
-    .eq('id_lista_precio', idLista);
-
-  // Renderizar Categorías
   const tbodyCat = document.getElementById('tabla-precios-categorias-body');
   tbodyCat.innerHTML = categorias.map(cat => {
     const p = preciosExistentes.find(x => x.id_categoria == cat.id && x.id_producto === null) || {};
@@ -350,7 +318,6 @@ async function cargarMatrizPrecios() {
     `;
   }).join('');
 
-  // Renderizar Excepciones de Productos (Overrides)
   const tbodyProd = document.getElementById('tabla-precios-productos-body');
   const preciosProd = preciosExistentes.filter(x => x.id_producto !== null);
 
@@ -359,12 +326,8 @@ async function cargarMatrizPrecios() {
     return;
   }
 
-  // Traer nombres de productos para los que tienen precio especial
   const idsProds = preciosProd.map(x => x.id_producto);
-  const { data: productos } = await supabaseClient
-    .from('TB_BPRODUCTOS')
-    .select('id, nombre')
-    .in('id', idsProds);
+  const { data: productos } = await supabaseClient.from('TB_BPRODUCTOS').select('id, nombre').in('id', idsProds);
 
   tbodyProd.innerHTML = preciosProd.map(p => {
     const prod = productos.find(x => x.id == p.id_producto) || { nombre: 'Producto #' + p.id_producto };
@@ -383,7 +346,6 @@ async function cargarMatrizPrecios() {
   }).join('');
 }
 
-// 3. GUARDAR / ACTUALIZAR PRECIO BASE DE CATEGORÍA
 async function guardarPrecioCategoria(id_categoria, idDetalle) {
   const idLista = document.getElementById('select-lista-activa').value;
   const precio_unidad = document.getElementById(`cat-un-${id_categoria}`).value || null;
@@ -397,18 +359,14 @@ async function guardarPrecioCategoria(id_categoria, idDetalle) {
     precio_docena: precio_docena ? parseFloat(precio_docena) : null
   };
 
-  let res;
-  if (idDetalle) {
-    res = await supabaseClient.from('TB_DLISTA_PRECIOS').update(payload).eq('id', idDetalle);
-  } else {
-    res = await supabaseClient.from('TB_DLISTA_PRECIOS').insert([payload]);
-  }
+  let res = idDetalle 
+    ? await supabaseClient.from('TB_DLISTA_PRECIOS').update(payload).eq('id', idDetalle)
+    : await supabaseClient.from('TB_DLISTA_PRECIOS').insert([payload]);
 
   if (res.error) alert('Error: ' + res.error.message);
   else cargarMatrizPrecios();
 }
 
-// 4. MÉTODOS PARA EXCEPCIONES POR PRODUCTO
 async function abrirModalPrecioEspecial() {
   const { data: prods } = await supabaseClient.from('TB_BPRODUCTOS').select('id, nombre').order('nombre');
   const select = document.getElementById('modal-especial-producto');
@@ -444,43 +402,29 @@ async function eliminarPrecioEspecial(idDetalle) {
   }
 }
 
-// --- ESTADO GLOBAL DEL POS ---
-let carrito = {}; // { idProducto: cantidad }
-let cacheProductos = [];
-let cachePrecios = [];
-let cacheCategorias = [];
-
-// 1. INICIALIZAR EL MÓDULO DE TOMA DE PEDIDOS
+// --- MÓDULO POS (TOMA DE PEDIDOS) ---
 async function inicializarPOS() {
   await cargarSelectsPOS();
   await cargarPOS();
 }
 
-// Cargar Clientes, Listas y Medios de Pago
 async function cargarSelectsPOS() {
   const { data: clientes } = await supabaseClient.from('TB_BCLIENTES').select('*').order('nombre');
   const { data: listas } = await supabaseClient.from('TB_TLISTA_PRECIOS').select('*');
   const { data: medios } = await supabaseClient.from('TB_BMEDIO_PAGO').select('*');
 
   const selectCli = document.getElementById('select-cliente-pedido');
-  if (selectCli && clientes) {
-    selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-  }
+  if (selectCli && clientes) selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
 
   const selectLis = document.getElementById('select-lista-pedido');
-  if (selectLis && listas) {
-    selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
-  }
+  if (selectLis && listas) selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
 
   const selectMed = document.getElementById('select-medio-pago');
-  if (selectMed && medios) {
-    selectMed.innerHTML = medios.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
-  }
+  if (selectMed && medios) selectMed.innerHTML = medios.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
 
   await alCambiarCliente();
 }
 
-// Sugerir la lista según el cliente seleccionado
 async function alCambiarCliente() {
   const selectCli = document.getElementById('select-cliente-pedido');
   if (!selectCli || !selectCli.value) return;
@@ -499,7 +443,6 @@ async function alCambiarCliente() {
   await cargarPOS();
 }
 
-// Carga de datos desde Supabase (Petición a Servidor)
 async function cargarPOS() {
   const selectLis = document.getElementById('select-lista-pedido');
   const idLista = selectLis && selectLis.value ? parseInt(selectLis.value) : 1;
@@ -515,29 +458,22 @@ async function cargarPOS() {
   renderizarGrillaPOS();
 }
 
-// Dibuja las tarjetas HTML usando los datos en caché
-// Dibuja las tarjetas HTML usando los datos en caché
 function renderizarGrillaPOS() {
   const contenedor = document.getElementById('contenedor-menu-productos');
   if (!contenedor) return;
 
-  // Control de seguridad por si las cachés aún no se cargaron
   if (!Array.isArray(cacheCategorias) || !Array.isArray(cacheProductos)) {
     contenedor.innerHTML = '<p class="text-muted text-center my-3">Cargando menú...</p>';
     return;
   }
 
-  // Paleta de colores fija para las categorías (Bootstrap)
   const paletaColores = ['primary', 'success', 'warning', 'danger', 'info', 'secondary'];
-  
-  // 1. Acumulador único para evitar reconstrucciones parciales del DOM
   let htmlCompleto = '';
 
   cacheCategorias.forEach((cat, index) => {
     const prodsCat = cacheProductos.filter(p => Number(p.id_categoria || p.idCategoria) === Number(cat.id));
     if (prodsCat.length === 0) return;
 
-    // Asignación consistente de color según el índice de la categoría
     const colorCat = paletaColores[index % paletaColores.length];
 
     htmlCompleto += `
@@ -576,58 +512,47 @@ function renderizarGrillaPOS() {
     htmlCompleto += `</div>`;
   });
 
-  // 2. Inyección única en el DOM
   contenedor.innerHTML = htmlCompleto;
-
   actualizarResumenCarrito();
 }
 
-// Obtener precio aplicando la jerarquía (Retorna { unidad, docena })
 function obtenerPrecioProducto(idProd, idCat, idLista = null) {
   if (!cachePrecios || cachePrecios.length === 0) return { unidad: 0, docena: 0 };
 
   const idP = Number(idProd);
   const idC = Number(idCat);
-  
-  // Si no se pasa idLista, intentamos leer la lista seleccionada en el select del pedido
   const idL = idLista ? Number(idLista) : Number(document.getElementById('select-lista-pedido')?.value || 0);
 
-  // Filtrar cachePrecios por la lista activa seleccionada (si se usa id_lista_precio)
   const preciosFiltrados = cachePrecios.filter(p => !idL || Number(p.id_lista_precio || p.id_lista) === idL);
   const listaABuscar = preciosFiltrados.length > 0 ? preciosFiltrados : cachePrecios;
 
-  // 1. Excepción por Producto
   const pProd = listaABuscar.find(p => p.id_producto !== null && Number(p.id_producto) === idP);
   if (pProd) {
     const un = Number(pProd.precio_unidad ?? pProd.precio ?? 0);
-    const doc = pProd.precio_docena ? Number(pProd.precio_docena) : (un * 12); // Fallback: 12 unidades
+    const doc = pProd.precio_docena ? Number(pProd.precio_docena) : (un * 12);
     return { unidad: un, docena: doc };
   }
 
-  // 2. Base por Categoría
   const pCat = listaABuscar.find(p => Number(p.id_categoria) === idC && (p.id_producto === null || p.id_producto === undefined));
   if (pCat) {
     const un = Number(pCat.precio_unidad ?? pCat.precio ?? 0);
-    const doc = pCat.precio_docena ? Number(pCat.precio_docena) : (un * 12); // Fallback: 12 unidades
+    const doc = pCat.precio_docena ? Number(pCat.precio_docena) : (un * 12);
     return { unidad: un, docena: doc };
   }
 
   return { unidad: 0, docena: 0 };
 }
 
-// Función auxiliar para calcular docenas + sueltas
 function calcularSubtotalItem(cantidad, precios, permiteDocena = true) {
   if (!permiteDocena || !precios.docena) {
     return cantidad * precios.unidad;
   }
-
   const docenas = Math.floor(cantidad / 12);
   const sueltas = cantidad % 12;
 
   return (docenas * precios.docena) + (sueltas * precios.unidad);
 }
 
-// Alterar cantidad del carrito (+1, -1, +12, -12) sin reconsultar Supabase
 function alterarCantidad(idProducto, delta) {
   const actual = carrito[idProducto] || 0;
   const nueva = Math.max(0, actual + delta);
@@ -643,13 +568,9 @@ function alterarCantidad(idProducto, delta) {
     elCant.innerText = nueva;
     const tarjeta = elCant.closest('.pos-card-producto');
     if (tarjeta) {
-      if (nueva > 0) {
-        tarjeta.classList.add('pos-card-activa');
-      } else {
-        tarjeta.classList.remove('pos-card-activa');
-      }
+      if (nueva > 0) tarjeta.classList.add('pos-card-activa');
+      else tarjeta.classList.remove('pos-card-activa');
     }
-
   } else {
     renderizarGrillaPOS();
   }
@@ -657,7 +578,6 @@ function alterarCantidad(idProducto, delta) {
   actualizarResumenCarrito();
 }
 
-// Actualizar resumen visual del carrito y cálculos
 function actualizarResumenCarrito() {
   const contenedorItems = document.getElementById('resumen-carrito-items');
   const keys = Object.keys(carrito);
@@ -676,9 +596,11 @@ function actualizarResumenCarrito() {
 
   keys.forEach(idProd => {
     const p = cacheProductos.find(x => x.id == idProd);
+    if (!p) return;
+
     const cant = carrito[idProd];
     const idCatProd = p.id_categoria;
-    const cat = typeof cacheCategorias !== 'undefined' ? cacheCategorias.find(c => Number(idCatProd) === Number(c.id)) : null;
+    const cat = cacheCategorias.find(c => Number(idCatProd) === Number(c.id));
     const nombreCat = cat ? cat.nombre : '';
     const textoProducto = nombreCat ? `${nombreCat} ${p.nombre}` : p.nombre;
     
@@ -715,7 +637,6 @@ function actualizarResumenCarrito() {
   document.getElementById('monto-total-pedido').innerText = `$${montoTotal.toLocaleString('es-AR')}`;
 }
 
-// Resetear carrito sin ir a buscar datos a Supabase innecesariamente
 function resetearPedido() {
   pedidoEditandoId = null;
   carrito = {};
@@ -726,17 +647,17 @@ function vaciarCarrito() {
   resetearPedido();
 }
 
-// Guardar el pedido en Supabase
 async function guardarPedido(estadoInicial) {
   const keys = Object.keys(carrito);
   if (keys.length === 0) {
-    alert('Agregá al menos un producto al carrito.');
+    mostrarNotificacion('Agregá al menos un producto al carrito.', 'warning');
     return;
   }
 
   const idCliente = document.getElementById('select-cliente-pedido').value;
   const idLista = document.getElementById('select-lista-pedido').value;
-  const idMedio = document.getElementById('select-medio-pago').value;
+  const selectMedio = document.getElementById('select-medio-pago');
+  const idMedio = selectMedio ? selectMedio.value : null;
 
   let montoTotal = 0;
   const detalles = [];
@@ -748,40 +669,33 @@ async function guardarPedido(estadoInicial) {
     const cantidadTotal = Number(carrito[idProd]) || 0;
     if (cantidadTotal <= 0) return;
 
-    // 1. Obtenemos el objeto { unidad, docena }
     const precios = obtenerPrecioProducto(p.id, p.id_categoria || p.idCategoria, idLista);
-
     const precioUnidad = precios.unidad || 0;
     const precioDocena = precios.docena || (precioUnidad * 12);
-
-    // 2. Evaluamos m_permite_docena 
     const permiteDocena = Boolean(p.m_permite_docena);
 
     if (permiteDocena && cantidadTotal >= 12) {
       const cantDocenas = Math.floor(cantidadTotal / 12);
       const unidadesSueltas = cantidadTotal % 12;
 
-      // Fila por las Docenas
       detalles.push({
         id_pedido: null,
         id_producto: p.id,
-        cantidad: cantDocenas*12,
-        precio: precioDocena*cantDocenas
+        cantidad: cantDocenas * 12,
+        precio: precioDocena * cantDocenas
       });
       montoTotal += cantDocenas * precioDocena;
 
-      // Fila por las Unidades sueltas remanentes
       if (unidadesSueltas > 0) {
         detalles.push({
           id_pedido: null,
           id_producto: p.id,
           cantidad: unidadesSueltas,
-          precio: precioUnidad*unidadesSueltas
+          precio: precioUnidad * unidadesSueltas
         });
         montoTotal += unidadesSueltas * precioUnidad;
       }
     } else {
-      // Venta por unidades sueltas
       detalles.push({
         id_pedido: null,
         id_producto: p.id,
@@ -792,78 +706,76 @@ async function guardarPedido(estadoInicial) {
     }
   });
   
-let idPedidoFinal = pedidoEditandoId;
+  let idPedidoFinal = pedidoEditandoId;
 
-if (pedidoEditandoId) {
-  // A) MODO EDICIÓN: Actualizar cabecera
-  const { error: errUpdate } = await supabaseClient
-    .from('TB_TPEDIDOS')
-    .update({
-      id_cliente: idCliente,
-      id_lista_precio: idLista,
-      id_medio_pago: idMedio,
-      estado: estadoInicial,
-      importe_total: montoTotal
-    })
-    .eq('id', pedidoEditandoId);
+  if (pedidoEditandoId) {
+    // MODO EDICIÓN: Actualizar cabecera
+    const { error: errUpdate } = await supabaseClient
+      .from('TB_TPEDIDOS')
+      .update({
+        id_cliente: idCliente,
+        id_lista_precio: idLista,
+        id_medio_pago: idMedio,
+        estado: estadoInicial,
+        importe_total: montoTotal
+      })
+      .eq('id', pedidoEditandoId);
 
-  if (errUpdate) {
-    mostrarNotificacion('Error al actualizar cabecera: ' + errUpdate.message, 'danger');
+    if (errUpdate) {
+      mostrarNotificacion('Error al actualizar cabecera: ' + errUpdate.message, 'danger');
+      return;
+    }
+
+    // Borrar detalles anteriores
+    await supabaseClient.from('TB_DPEDIDOS').delete().eq('id_pedido', pedidoEditandoId);
+
+  } else {
+    // MODO NUEVO: Insertar nueva cabecera
+    const { data: pedido, error } = await supabaseClient
+      .from('TB_TPEDIDOS')
+      .insert([{
+        fecha: new Date().toISOString().split('T')[0],
+        id_cliente: idCliente,
+        id_lista_precio: idLista,
+        id_medio_pago: idMedio,
+        estado: estadoInicial,
+        importe_total: montoTotal
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      mostrarNotificacion('Error al guardar el pedido: ' + error.message, 'danger');
+      return;
+    }
+    idPedidoFinal = pedido.id;
+  }
+
+  // Se asigna SIEMPRE el id_pedido correspondiente a los detalles antes de insertar
+  detalles.forEach(d => d.id_pedido = idPedidoFinal);
+
+  const { error: errorDetalle } = await supabaseClient
+    .from('TB_DPEDIDOS')
+    .insert(detalles);
+
+  if (errorDetalle) {
+    mostrarNotificacion('Error al guardar el detalle: ' + errorDetalle.message, 'danger');
     return;
   }
 
-  // Borrar detalles anteriores para re-insertar los nuevos
-  await supabaseClient.from('TB_DPEDIDOS').delete().eq('id_pedido', pedidoEditandoId);
+  mostrarNotificacion(`¡Pedido #${idPedidoFinal} ${pedidoEditandoId ? 'actualizado' : 'registrado'} con éxito!`, 'success');
 
-} else {
-  // B) MODO NUEVO: Insertar nueva cabecera
-  const { data: pedido, error } = await supabaseClient
-    .from('TB_TPEDIDOS')
-    .insert([{
-      fecha: new Date().toISOString().split('T')[0],
-      id_cliente: idCliente,
-      id_lista_precio: idLista,
-      id_medio_pago: idMedio,
-      estado: estadoInicial,
-      importe_total: montoTotal
-    }])
-    .select()
-    .single();
-
-  if (error) {
-    mostrarNotificacion('Error al guardar el pedido: ' + error.message, 'danger');
-    return;
-  }
-  idPedidoFinal = pedido.id;
+  pedidoEditandoId = null;
+  resetearPedido();
 }
 
-// Re-insertar detalles con el ID del pedido correspondiente
-detalles.forEach(d => d.id_pedido = idPedidoFinal);
-
-const { error: errorDetalle } = await supabaseClient
-  .from('TB_DPEDIDOS')
-  .insert(detalles);
-
-if (errorDetalle) {
-  mostrarNotificacion('Error al guardar el detalle: ' + errorDetalle.message, 'danger');
-  return;
-}
-
-mostrarNotificacion(`¡Pedido #${idPedidoFinal} ${pedidoEditandoId ? 'actualizado' : 'registrado'} con éxito!`, 'success');
-
-// Limpiar estado de edición y carrito
-pedidoEditandoId = null;
-resetearPedido();
- 
-}
-
-// --- GESTIÓN DE PEDIDOS DEL DÍA / HISTÓRICO ---
 // --- GESTIÓN DE PEDIDOS DEL DÍA / HISTÓRICO ---
 async function cargarTablaPedidos() {
   const inputDesde = document.getElementById('filtro-fecha-desde');
   const inputHasta = document.getElementById('filtro-fecha-hasta');
+  const inputBuscar = document.getElementById('filtro-buscar-pedido');
   
-  if (!inputDesde.value) {
+  if (inputDesde && !inputDesde.value) {
     const hoy = new Date().toISOString().split('T')[0];
     inputDesde.value = hoy;
     inputHasta.value = hoy;
@@ -887,23 +799,32 @@ async function cargarTablaPedidos() {
   const { data: pedidos, error } = await query;
   if (error) return;
 
-  // Cálculo de KPIs actualizado con los nuevos estados
+  // Filtrado opcional en memoria por nombre de cliente o ID del pedido
+  let pedidosFiltrados = pedidos || [];
+  if (inputBuscar && inputBuscar.value.trim() !== '') {
+    const busqueda = inputBuscar.value.trim().toLowerCase();
+    pedidosFiltrados = pedidosFiltrados.filter(p => {
+      const cliNombre = p.TB_BCLIENTES?.nombre?.toLowerCase() || '';
+      const idStr = String(p.id);
+      return cliNombre.includes(busqueda) || idStr.includes(busqueda);
+    });
+  }
+
+  // Cálculo de KPIs
   let totalCobrado = 0;
   let totalPendienteCobro = 0;
   let cantPreparacion = 0;
   let cantPreparados = 0;
   let cantAnulados = 0;
 
-  pedidos.forEach(p => {
+  pedidosFiltrados.forEach(p => {
     if (p.estado === 'COMPLETADO') totalCobrado += (p.importe_total || 0);
     if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.importe_total || 0);
-    
     if (p.estado === 'PREPARACION') cantPreparacion++;
     if (p.estado === 'PREPARADO') cantPreparados++;
     if (p.estado === 'ANULADO') cantAnulados++;
   });
 
-  // Imprimimos en pantalla los KPIs
   if (document.getElementById('kpi-total-cobrado')) {
     document.getElementById('kpi-total-cobrado').innerText = `$${totalCobrado.toLocaleString('es-AR')}`;
     document.getElementById('kpi-total-pendiente-cobro').innerText = `$${totalPendienteCobro.toLocaleString('es-AR')}`;
@@ -912,16 +833,15 @@ async function cargarTablaPedidos() {
     document.getElementById('kpi-cant-anulados').innerText = cantAnulados;
   }
 
-  // Renderizar Tabla
   const tbody = document.getElementById('tabla-pedidos-body');
   if (!tbody) return;
 
-  if (pedidos.length === 0) {
+  if (pedidosFiltrados.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No hay pedidos registrados para estos filtros.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = pedidos.map(p => {
+  tbody.innerHTML = pedidosFiltrados.map(p => {
     const clienteNombre = p.TB_BCLIENTES ? p.TB_BCLIENTES.nombre : 'Consumidor Final';
     const medioPago = p.TB_BMEDIO_PAGO ? p.TB_BMEDIO_PAGO.nombre : 'Sin especificar';
     const hora = new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -935,20 +855,17 @@ async function cargarTablaPedidos() {
     let badgeClass = 'badge-secondary';
     let estadoTexto = p.estado;
 
-    // Badges de Estado
     if (p.estado === 'PREPARACION') { badgeClass = 'badge-info'; estadoTexto = '⏳ En Preparación'; }
     if (p.estado === 'PREPARADO') { badgeClass = 'badge-primary'; estadoTexto = '🔔 Preparado'; }
     if (p.estado === 'ENTREGADO_IMPAGO') { badgeClass = 'badge-warning'; estadoTexto = '📦 Entregado (Impago)'; }
     if (p.estado === 'COMPLETADO') { badgeClass = 'badge-success'; estadoTexto = '✅ Completado'; }
     if (p.estado === 'ANULADO') { badgeClass = 'badge-danger'; estadoTexto = '🚫 Anulado'; }
 
-    // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
     let botonesAccion = '';
 
-    // 1. Si está EN PREPARACIÓN -> Solo puede pasar a PREPARADO o Editar
     if (p.estado === 'PREPARACION') {
       botonesAccion += `
-        <button class="btn btn-outline-primary" title="Marcar como Preparado (Listo)" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
+        <button class="btn btn-outline-primary" title="Marcar como Preparado" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
           <i class="fas fa-box-open"></i>
         </button>
         <button class="btn btn-outline-secondary" title="Editar Pedido" onclick="editarPedido(${p.id})">
@@ -957,7 +874,6 @@ async function cargarTablaPedidos() {
       `;
     }
 
-    // 2. Si ya está PREPARADO -> Se puede Cobrar/Entregar, Entregar Impago o Editar
     if (p.estado === 'PREPARADO') {
       botonesAccion += `
         <button class="btn btn-outline-success" title="Cobrar y Entregar" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
@@ -972,7 +888,6 @@ async function cargarTablaPedidos() {
       `;
     }
 
-    // 3. Si está ENTREGADO IMPAGO -> Solo queda cobrarlo para pasar a COMPLETADO
     if (p.estado === 'ENTREGADO_IMPAGO') {
       botonesAccion += `
         <button class="btn btn-outline-success" title="Registrar Cobro" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
@@ -981,7 +896,6 @@ async function cargarTablaPedidos() {
       `;
     }
 
-    // 4. Botón de ANULAR (Habilitado para TODOS los estados excepto los que YA están ANULADOS)
     if (p.estado !== 'ANULADO') {
       botonesAccion += `
         <button class="btn btn-outline-danger" title="Anular Pedido" onclick="cambiarEstadoPedido(${p.id}, 'ANULADO')">
@@ -990,7 +904,6 @@ async function cargarTablaPedidos() {
       `;
     }
 
-    // 5. Botón VER DETALLE (siempre visible)
     botonesAccion += `
       <button class="btn btn-outline-info" onclick="verDetallePedido(${p.id})" title="Ver detalle">
         <i class="fas fa-eye"></i>
@@ -1015,7 +928,6 @@ async function cargarTablaPedidos() {
   }).join('');
 }
 
-// Transición de estados en Supabase
 async function cambiarEstadoPedido(idPedido, nuevoEstado) {
   if (nuevoEstado === 'ANULADO' && !confirm('¿Seguro que deseas anular este pedido? Se excluirá del cierre de caja.')) {
     return;
@@ -1027,7 +939,7 @@ async function cambiarEstadoPedido(idPedido, nuevoEstado) {
     .eq('id', idPedido);
 
   if (error) {
-    alert('Error al cambiar el estado: ' + error.message);
+    mostrarNotificacion('Error al cambiar el estado: ' + error.message, 'danger');
   } else {
     cargarTablaPedidos();
   }
@@ -1035,7 +947,6 @@ async function cambiarEstadoPedido(idPedido, nuevoEstado) {
 
 async function editarPedido(idPedido) {
   try {
-    // 1. Obtener cabecera y detalle del pedido desde Supabase
     const { data: pedido, error } = await supabaseClient
       .from('TB_TPEDIDOS')
       .select(`
@@ -1050,35 +961,29 @@ async function editarPedido(idPedido) {
       return;
     }
 
-    // 2. Establecer la variable de edición
     pedidoEditandoId = pedido.id;
 
-    // 3. Cambiar a la vista del POS
     const linkPedidos = document.querySelector('a[onclick*="pedidos"]');
     navegarA('pedidos', linkPedidos);
 
-    // 4. Seleccionar cliente, lista de precios y medio de pago
     if (document.getElementById('select-cliente-pedido')) {
       document.getElementById('select-cliente-pedido').value = pedido.id_cliente;
     }
     if (document.getElementById('select-lista-pedido')) {
       document.getElementById('select-lista-pedido').value = pedido.id_lista_precio;
     }
-    if (document.getElementById('select-medio-pago')) {
+    if (document.getElementById('select-medio-pago') && pedido.id_medio_pago) {
       document.getElementById('select-medio-pago').value = pedido.id_medio_pago;
     }
 
-    // 5. Cargar los precios y productos en memoria
     await cargarPOS();
 
-    // 6. Reconstruir el objeto carrito
     carrito = {};
     (pedido.TB_DPEDIDOS || []).forEach(item => {
       const idProd = item.id_producto;
       carrito[idProd] = (carrito[idProd] || 0) + item.cantidad;
     });
 
-    // 7. Renderizar la grilla y el resumen
     renderizarGrillaPOS();
     mostrarNotificacion(`Editando Pedido #${pedido.id}`, 'info');
 
@@ -1088,15 +993,12 @@ async function editarPedido(idPedido) {
   }
 }
 
-
-// --- CRUD TB_ACLIENTE_LISTA_PRECIOS ---
-
+// --- MÓDULO ASOCIACIÓN CLIENTE - LISTA PRECIOS ---
 async function inicializarCrudClienteLista() {
   await cargarSelectsAsociacion();
   await listarAsociacionesClienteLista();
 }
 
-// 1. Cargar desplegables de Clientes y Listas
 async function cargarSelectsAsociacion() {
   const { data: clientes } = await supabaseClient.from('TB_BCLIENTES').select('id, nombre').order('nombre');
   const { data: listas } = await supabaseClient.from('TB_TLISTA_PRECIOS').select('id, nombre');
@@ -1104,15 +1006,10 @@ async function cargarSelectsAsociacion() {
   const selectCli = document.getElementById('asoc-select-cliente');
   const selectLis = document.getElementById('asoc-select-lista');
 
-  if (selectCli && clientes) {
-    selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-  }
-  if (selectLis && listas) {
-    selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
-  }
+  if (selectCli && clientes) selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  if (selectLis && listas) selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
 }
 
-// 2. READ: Listar asociaciones con Relational Queries de Supabase
 async function listarAsociacionesClienteLista() {
   const tbody = document.getElementById('tabla-asoc-cliente-lista');
   if (!tbody) return;
@@ -1151,7 +1048,6 @@ async function listarAsociacionesClienteLista() {
   `).join('');
 }
 
-// 3. CREATE / UPDATE: Guardar relación asegurando única predeterminada por cliente
 async function guardarAsociacionClienteLista(event) {
   event.preventDefault();
 
@@ -1160,7 +1056,6 @@ async function guardarAsociacionClienteLista(event) {
   const idLista = parseInt(document.getElementById('asoc-select-lista').value);
   const esPredeterminada = document.getElementById('asoc-predeterminada').checked;
 
-  // Si se marca como predeterminada, desmarcamos las demás del mismo cliente
   if (esPredeterminada) {
     await supabaseClient
       .from('TB_ACLIENTE_LISTA_PRECIOS')
@@ -1168,18 +1063,11 @@ async function guardarAsociacionClienteLista(event) {
       .eq('id_cliente', idCliente);
   }
 
-  const payload = {
-    id_cliente: idCliente,
-    id_lista_precio: idLista,
-    m_predeterminada: esPredeterminada
-  };
+  const payload = { id_cliente: idCliente, id_lista_precio: idLista, m_predeterminada: esPredeterminada };
 
-  let res;
-  if (id) {
-    res = await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').update(payload).eq('id', id);
-  } else {
-    res = await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').insert([payload]);
-  }
+  let res = id 
+    ? await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').update(payload).eq('id', id)
+    : await supabaseClient.from('TB_ACLIENTE_LISTA_PRECIOS').insert([payload]);
 
   if (res.error) {
     alert('Error al guardar: ' + res.error.message);
@@ -1189,7 +1077,6 @@ async function guardarAsociacionClienteLista(event) {
   }
 }
 
-// 4. Cargar datos en el formulario para Editar
 function editarAsociacion(id, idCliente, idLista, esPredeterminada) {
   document.getElementById('asoc-id').value = id;
   document.getElementById('asoc-select-cliente').value = idCliente;
@@ -1197,7 +1084,6 @@ function editarAsociacion(id, idCliente, idLista, esPredeterminada) {
   document.getElementById('asoc-predeterminada').checked = esPredeterminada;
 }
 
-// 5. DELETE: Eliminar asociación
 async function eliminarAsociacion(id) {
   if (!confirm('¿Eliminar esta asociación?')) return;
 
@@ -1214,7 +1100,6 @@ function resetearFormAsociacion() {
   document.getElementById('asoc-predeterminada').checked = false;
 }
 
-// Cierra el menú desplegable al hacer clic en cualquier sección
 document.querySelectorAll('.main-sidebar .nav-link').forEach(link => {
   link.addEventListener('click', () => {
     document.body.classList.remove('sidebar-open');
@@ -1222,10 +1107,9 @@ document.querySelectorAll('.main-sidebar .nav-link').forEach(link => {
   });
 });
 
-// --- VER DETALLE DEL PEDIDO ---
+// --- VER DETALLE DEL PEDIDO Y NOTIFICACIONES ---
 async function verDetallePedido(idPedido) {
   try {
-    // Consulta a Supabase adaptada a tu esquema
     const { data: pedido, error } = await supabaseClient
       .from('TB_TPEDIDOS')
       .select(`
@@ -1247,19 +1131,16 @@ async function verDetallePedido(idPedido) {
     if (error) throw error;
     if (!pedido) return;
 
-    // Helper para dar formato 99.999,99
     const formatearMoneda = (val) => Number(val || 0).toLocaleString('es-AR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
 
-    // Asignación de datos del cabezal
     document.getElementById('detalle-id-pedido').innerText = pedido.id;
     document.getElementById('detalle-cliente').innerText = pedido.TB_BCLIENTES?.nombre || 'Consumidor Final';
     document.getElementById('detalle-medio-pago').innerText = pedido.TB_BMEDIO_PAGO?.nombre || 'Sin especificar';
     document.getElementById('detalle-monto-total').innerText = `$${formatearMoneda(pedido.importe_total)}`;
 
-    // Mapeo de productos del pedido
     const items = pedido.TB_DPEDIDOS || [];
     const htmlItems = items.length > 0 
       ? items.map(item => `
@@ -1272,18 +1153,15 @@ async function verDetallePedido(idPedido) {
       : `<tr><td colspan="4" class="text-center text-muted">No hay ítems registrados.</td></tr>`;
 
     document.getElementById('tabla-detalle-body').innerHTML = htmlItems;
-
-    // Mostrar modal con jQuery / Bootstrap 4
     $('#modalDetallePedido').modal('show');
 
   } catch (err) {
     console.error('Error al cargar detalle del pedido:', err);
-    alert('Ocurrió un error al cargar el detalle.');
+    mostrarNotificacion('Ocurrió un error al cargar el detalle.', 'danger');
   }
 }
 
 function mostrarNotificacion(mensaje, tipo = 'success') {
-  // 1. Crear contenedor si no existe
   let container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
@@ -1292,7 +1170,6 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     document.body.appendChild(container);
   }
 
-  // 2. Colores según el tipo
   const colores = {
     success: '#28a745',
     danger: '#dc3545',
@@ -1302,7 +1179,6 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
   const colorFondo = colores[tipo] || colores.success;
   const colorTexto = tipo === 'warning' ? '#212529' : '#ffffff';
 
-  // 3. Crear el elemento de notificación
   const toast = document.createElement('div');
   toast.innerText = mensaje;
   toast.style.cssText = `
@@ -1320,13 +1196,11 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
 
   container.appendChild(toast);
 
-  // 4. Mostrar con animación (Entrada)
   requestAnimationFrame(() => {
     toast.style.opacity = '1';
     toast.style.transform = 'translateY(0)';
   });
 
-  // 5. Ocultar y remover a los 2.5 segundos (Salida)
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(-10px)';
