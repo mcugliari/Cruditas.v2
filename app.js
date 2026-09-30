@@ -860,6 +860,7 @@ resetearPedido();
 }
 
 // --- GESTIÓN DE PEDIDOS DEL DÍA / HISTÓRICO ---
+// --- GESTIÓN DE PEDIDOS DEL DÍA / HISTÓRICO ---
 async function cargarTablaPedidos() {
   const inputDesde = document.getElementById('filtro-fecha-desde');
   const inputHasta = document.getElementById('filtro-fecha-hasta');
@@ -888,33 +889,35 @@ async function cargarTablaPedidos() {
   const { data: pedidos, error } = await query;
   if (error) return;
 
- // Cálculo de KPIs actualizado con los nuevos estados
+  // Cálculo de KPIs actualizado con los nuevos estados
   let totalCobrado = 0;
   let totalPendienteCobro = 0;
   let cantPreparacion = 0;
-  let cantPreparados = 0; // NUEVA VARIABLE
+  let cantPreparados = 0;
   let cantAnulados = 0;
 
   pedidos.forEach(p => {
     if (p.estado === 'COMPLETADO') totalCobrado += (p.importe_total || 0);
     if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.importe_total || 0);
     
-    // Separamos la cuenta de "En preparación" y "Preparados"
     if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') cantPreparacion++;
     if (p.estado === 'PREPARADO') cantPreparados++;
-    
     if (p.estado === 'ANULADO') cantAnulados++;
   });
 
-  // Imprimimos en pantalla
-  document.getElementById('kpi-total-cobrado').innerText = `$${totalCobrado.toLocaleString('es-AR')}`;
-  document.getElementById('kpi-total-pendiente-cobro').innerText = `$${totalPendienteCobro.toLocaleString('es-AR')}`;
-  document.getElementById('kpi-cant-preparacion').innerText = cantPreparacion;
-  document.getElementById('kpi-cant-preparados').innerText = cantPreparados; // SE ACTUALIZA EL NUEVO KPI
-  document.getElementById('kpi-cant-anulados').innerText = cantAnulados;
+  // Imprimimos en pantalla los KPIs
+  if (document.getElementById('kpi-total-cobrado')) {
+    document.getElementById('kpi-total-cobrado').innerText = `$${totalCobrado.toLocaleString('es-AR')}`;
+    document.getElementById('kpi-total-pendiente-cobro').innerText = `$${totalPendienteCobro.toLocaleString('es-AR')}`;
+    document.getElementById('kpi-cant-preparacion').innerText = cantPreparacion;
+    document.getElementById('kpi-cant-preparados').innerText = cantPreparados;
+    document.getElementById('kpi-cant-anulados').innerText = cantAnulados;
+  }
 
   // Renderizar Tabla
   const tbody = document.getElementById('tabla-pedidos-body');
+  if (!tbody) return;
+
   if (pedidos.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No hay pedidos registrados para estos filtros.</td></tr>`;
     return;
@@ -935,13 +938,13 @@ async function cargarTablaPedidos() {
     let estadoTexto = p.estado;
 
     // Badges de Estado
-    if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') { badgeClass = 'badge-info'; estadoTexto = '⏳ En Preparación'; }
+    if (p.estado === 'PREPARACION') { badgeClass = 'badge-info'; estadoTexto = '⏳ En Preparación'; }
     if (p.estado === 'PREPARADO') { badgeClass = 'badge-primary'; estadoTexto = '🔔 Preparado'; }
     if (p.estado === 'ENTREGADO_IMPAGO') { badgeClass = 'badge-warning'; estadoTexto = '📦 Entregado (Impago)'; }
     if (p.estado === 'COMPLETADO') { badgeClass = 'badge-success'; estadoTexto = '✅ Completado'; }
     if (p.estado === 'ANULADO') { badgeClass = 'badge-danger'; estadoTexto = '🚫 Anulado'; }
 
-   // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
+    // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
     let botonesAccion = '';
 
     // 1. Si está EN PREPARACIÓN -> Solo puede pasar a PREPARADO o Editar
@@ -956,7 +959,7 @@ async function cargarTablaPedidos() {
       `;
     }
 
-    // 2. Si ya está PREPARADO -> Se puede Cobrar/Entregar o Entregar Impago o Editar
+    // 2. Si ya está PREPARADO -> Se puede Cobrar/Entregar, Entregar Impago o Editar
     if (p.estado === 'PREPARADO') {
       botonesAccion += `
         <button class="btn btn-outline-success" title="Cobrar y Entregar" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
@@ -995,7 +998,6 @@ async function cargarTablaPedidos() {
         <i class="fas fa-eye"></i>
       </button>
     `;
-}
 
     return `
       <tr>
