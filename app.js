@@ -155,12 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
   navegarA('pedidos', linkPedidos);
 }); // FIN DOMContentLoaded
 
-
-let categoriasCache = []; // Para no re-consultar categorías todo el tiempo
-
 // 1. CARGAR CATEGORÍAS EN SELECTS
 async function cargarCategoriasSelect() {
-  if (categoriasCache.length > 0) return;
+  if (cacheCategorias.length > 0) return;
 
   const { data: categorias, error } = await supabaseClient
     .from('TB_BCATEGORIAS')
@@ -168,7 +165,7 @@ async function cargarCategoriasSelect() {
     .order('nombre', { ascending: true });
 
   if (!error && categorias) {
-    categoriasCache = categorias;
+    cacheCategorias = categorias;
     const select = document.getElementById('prod-categoria');
     select.innerHTML = '<option value="">-- Seleccionar Categoría --</option>' + 
       categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
@@ -465,19 +462,16 @@ async function cargarSelectsPOS() {
   const { data: listas } = await supabaseClient.from('TB_TLISTA_PRECIOS').select('*');
   const { data: medios } = await supabaseClient.from('TB_BMEDIO_PAGO').select('*');
 
-  // Select Clientes
   const selectCli = document.getElementById('select-cliente-pedido');
   if (selectCli && clientes) {
     selectCli.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
   }
 
-  // Select Listas
   const selectLis = document.getElementById('select-lista-pedido');
   if (selectLis && listas) {
     selectLis.innerHTML = listas.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
   }
 
-  // Select Medios Pago
   const selectMed = document.getElementById('select-medio-pago');
   if (selectMed && medios) {
     selectMed.innerHTML = medios.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
@@ -721,11 +715,15 @@ function actualizarResumenCarrito() {
   document.getElementById('monto-total-pedido').innerText = `$${montoTotal.toLocaleString('es-AR')}`;
 }
 
-// Resetear carrito
+// Resetear carrito sin ir a buscar datos a Supabase innecesariamente
 function resetearPedido() {
   pedidoEditandoId = null;
   carrito = {};
-  cargarPOS();
+  renderizarGrillaPOS();
+}
+
+function vaciarCarrito() {
+  resetearPedido();
 }
 
 // Guardar el pedido en Supabase
@@ -900,7 +898,7 @@ async function cargarTablaPedidos() {
     if (p.estado === 'COMPLETADO') totalCobrado += (p.importe_total || 0);
     if (p.estado === 'ENTREGADO_IMPAGO') totalPendienteCobro += (p.importe_total || 0);
     
-    if (p.estado === 'PREPARACION' || p.estado === 'PENDIENTE') cantPreparacion++;
+    if (p.estado === 'PREPARACION') cantPreparacion++;
     if (p.estado === 'PREPARADO') cantPreparados++;
     if (p.estado === 'ANULADO') cantAnulados++;
   });
