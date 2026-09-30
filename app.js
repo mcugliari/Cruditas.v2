@@ -3,6 +3,8 @@ const SUPABASE_KEY = "sb_publishable_RzqmU62ZqTbjc5LFFvs13A_T-3uQUiH";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+let pedidoEditandoId = null; // null = Nuevo pedido; ID = Editando existente
+
 function navegarA(seccionId, elementoMenu) {
   // 1. Ocultar todas las secciones
   const secciones = document.querySelectorAll('.modulo-app');
@@ -721,6 +723,7 @@ function actualizarResumenCarrito() {
 
 // Resetear carrito
 function resetearPedido() {
+  pedidoEditandoId = null;
   carrito = {};
   cargarPOS();
 }
@@ -790,8 +793,32 @@ async function guardarPedido(estadoInicial) {
       montoTotal += cantidadTotal * precioUnidad;
     }
   });
+  
+let idPedidoFinal = pedidoEditandoId;
 
-  // 3. Insertar Cabecera de Pedido
+if (pedidoEditandoId) {
+  // A) MODO EDICIÓN: Actualizar cabecera
+  const { error: errUpdate } = await supabaseClient
+    .from('TB_TPEDIDOS')
+    .update({
+      id_cliente: idCliente,
+      id_lista_precio: idLista,
+      id_medio_pago: idMedio,
+      estado: estadoInicial,
+      importe_total: montoTotal
+    })
+    .eq('id', pedidoEditandoId);
+
+  if (errUpdate) {
+    mostrarNotificacion('Error al actualizar cabecera: ' + errUpdate.message, 'danger');
+    return;
+  }
+
+  // Borrar detalles anteriores para re-insertar los nuevos
+  await supabaseClient.from('TB_DPEDIDOS').delete().eq('id_pedido', pedidoEditandoId);
+
+} else {
+  // B) MODO NUEVO: Insertar nueva cabecera
   const { data: pedido, error } = await supabaseClient
     .from('TB_TPEDIDOS')
     .insert([{
@@ -809,21 +836,27 @@ async function guardarPedido(estadoInicial) {
     mostrarNotificacion('Error al guardar el pedido: ' + error.message, 'danger');
     return;
   }
+  idPedidoFinal = pedido.id;
+}
 
-  // 4. Asignar ID de pedido generado e Insertar Detalle
-  detalles.forEach(d => d.id_pedido = pedido.id);
+// Re-insertar detalles con el ID del pedido correspondiente
+detalles.forEach(d => d.id_pedido = idPedidoFinal);
 
-  const { error: errorDetalle } = await supabaseClient
-    .from('TB_DPEDIDOS')
-    .insert(detalles);
+const { error: errorDetalle } = await supabaseClient
+  .from('TB_DPEDIDOS')
+  .insert(detalles);
 
-  if (errorDetalle) {
-    mostrarNotificacion('Error al guardar el detalle del pedido: ' + errorDetalle.message, 'danger');
-    return;
-  }
+if (errorDetalle) {
+  mostrarNotificacion('Error al guardar el detalle: ' + errorDetalle.message, 'danger');
+  return;
+}
 
-  mostrarNotificacion(`¡Pedido #${pedido.id} registrado correctamente!`, 'success');
-  resetearPedido();
+mostrarNotificacion(`¡Pedido #${idPedidoFinal} ${pedidoEditandoId ? 'actualizado' : 'registrado'} con éxito!`, 'success');
+
+// Limpiar estado de edición y carrito
+pedidoEditandoId = null;
+resetearPedido();
+ 
 }
 
 // --- GESTIÓN DE PEDIDOS DEL DÍA / HISTÓRICO ---
@@ -958,6 +991,15 @@ async function cargarTablaPedidos() {
       </button>
     `;
 
+    // Si está EN PREPARACIÓN o PREPARADO -> Permitir Editar
+    if (p.estado === 'PREPARACION' || p.estado === 'PREPARADO') {
+      botonesAccion += `
+        <button class="btn btn-outline-secondary" title="Editar Pedido" onclick="editarPedido(${p.id})">
+          <i class="fas fa-edit"></i>
+        </button>
+      `;
+}
+
     return `
       <tr>
         <td class="font-weight-bold">#${p.id}</td>
@@ -993,6 +1035,62 @@ async function cambiarEstadoPedido(idPedido, nuevoEstado) {
     cargarTablaPedidos();
   }
 }
+
+async function editarPedido(idPedido) {
+  try {
+    // 1. Obtener cabecera y detalle del pedido desde Supabase
+    const { data: pedido, error } = await supabaseClient
+      .from('TB_TPEDIDOS')
+      .select(`
+        *,
+        TB_DPEDIDOS(id_producto, cantidad)
+      `)
+      .eq('id', idPedido)
+      .single();
+
+    if (error || !pedido) {
+      mostrarNotificacion('Error al cargar el pedido para edición', 'danger');
+      return;
+    }
+
+    // 2. Establecer la variable de edición
+    pedidoEditandoId = pedido.id;
+
+    // 3. Cambiar a la vista del POS
+    const linkPedidos = document.querySelector('a[onclick*="pedidos"]');
+    navegarA('pedidos', linkPedidos);
+
+    // 4. Seleccionar cliente, lista de precios y medio de pago
+    if (document.getElementById('select-cliente-pedido')) {
+      document.getElementById('select-cliente-pedido').value = pedido.id_cliente;
+    }
+    if (document.getElementById('select-lista-pedido')) {
+      document.getElementById('select-lista-pedido').value = pedido.id_lista_precio;
+    }
+    if (document.getElementById('select-medio-pago')) {
+      document.getElementById('select-medio-pago').value = pedido.id_medio_pago;
+    }
+
+    // 5. Cargar los precios y productos en memoria
+    await cargarPOS();
+
+    // 6. Reconstruir el objeto carrito
+    carrito = {};
+    (pedido.TB_DPEDIDOS || []).forEach(item => {
+      const idProd = item.id_producto;
+      carrito[idProd] = (carrito[idProd] || 0) + item.cantidad;
+    });
+
+    // 7. Renderizar la grilla y el resumen
+    renderizarGrillaPOS();
+    mostrarNotificacion(`Editando Pedido #${pedido.id}`, 'info');
+
+  } catch (err) {
+    console.error('Error en editarPedido:', err);
+    mostrarNotificacion('Ocurrió un error al intentar editar el pedido.', 'danger');
+  }
+}
+
 
 // --- CRUD TB_ACLIENTE_LISTA_PRECIOS ---
 
