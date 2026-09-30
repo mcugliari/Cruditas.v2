@@ -941,20 +941,22 @@ async function cargarTablaPedidos() {
     if (p.estado === 'COMPLETADO') { badgeClass = 'badge-success'; estadoTexto = '✅ Completado'; }
     if (p.estado === 'ANULADO') { badgeClass = 'badge-danger'; estadoTexto = '🚫 Anulado'; }
 
-    // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
    // LÓGICA DE BOTONES SEGÚN ESTADO ACTUAL
     let botonesAccion = '';
 
-    // 1. Si está EN PREPARACIÓN -> Solo puede pasar a PREPARADO
+    // 1. Si está EN PREPARACIÓN -> Solo puede pasar a PREPARADO o Editar
     if (p.estado === 'PREPARACION') {
       botonesAccion += `
         <button class="btn btn-outline-primary" title="Marcar como Preparado (Listo)" onclick="cambiarEstadoPedido(${p.id}, 'PREPARADO')">
           <i class="fas fa-box-open"></i>
         </button>
+        <button class="btn btn-outline-secondary" title="Editar Pedido" onclick="editarPedido(${p.id})">
+          <i class="fas fa-edit"></i>
+        </button>
       `;
     }
 
-    // 2. Si ya está PREPARADO -> Se puede Cobrar/Entregar o Entregar Impago
+    // 2. Si ya está PREPARADO -> Se puede Cobrar/Entregar o Entregar Impago o Editar
     if (p.estado === 'PREPARADO') {
       botonesAccion += `
         <button class="btn btn-outline-success" title="Cobrar y Entregar" onclick="cambiarEstadoPedido(${p.id}, 'COMPLETADO')">
@@ -962,6 +964,9 @@ async function cargarTablaPedidos() {
         </button>
         <button class="btn btn-outline-warning" title="Entregar sin Cobrar (Impago)" onclick="cambiarEstadoPedido(${p.id}, 'ENTREGADO_IMPAGO')">
           <i class="fas fa-truck"></i>
+        </button>
+        <button class="btn btn-outline-secondary" title="Editar Pedido" onclick="editarPedido(${p.id})">
+          <i class="fas fa-edit"></i>
         </button>
       `;
     }
@@ -990,14 +995,6 @@ async function cargarTablaPedidos() {
         <i class="fas fa-eye"></i>
       </button>
     `;
-
-    // Si está EN PREPARACIÓN o PREPARADO -> Permitir Editar
-    if (p.estado === 'PREPARACION' || p.estado === 'PREPARADO') {
-      botonesAccion += `
-        <button class="btn btn-outline-secondary" title="Editar Pedido" onclick="editarPedido(${p.id})">
-          <i class="fas fa-edit"></i>
-        </button>
-      `;
 }
 
     return `
